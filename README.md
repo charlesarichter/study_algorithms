@@ -11,3 +11,6 @@ Forward-Backward, Viterbi, Baum-Welch, Variable Elimination, Sum-Product (i.e., 
 
 Learning:
 SVM, decision tree, Bayesian linear regression, Gaussian Process regression, Gaussian Process classification
+
+Optimization:
+Stochastic Gradient Descent, Mini-Batch SGD
