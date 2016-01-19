@@ -54,7 +54,7 @@ for x2 = 0:1
         end
     end
 end
-% disp(px1equals0)
+px1equals0
 
 %% Query the model for a marginal, conditioned on some other variable
 % Very crude query: Suppose we want the marginal probability of x1 given
@@ -137,6 +137,13 @@ px1equals0givenx5equals0 = px1equals0andx5equals0/px5equals0;
 
 m5_234 = zeros(2,2,2);
 
+% COMPUTE OUR FIRST FACTOR PRODUCT: 
+%   phi_product(x2,x3,x4,x5) = phi25(x2,x5)*phi345(x3,x4,x5)
+% AND SUM OUT x5:
+%   m_5(x2,x3,x4) = sum_x5 ( phi_product(x2,x3,x4,x5) )
+%
+% QUESTION: Can we swap the sum and product operations?
+%
 % We will be summing over x5 based on x2, x3, x4.
 for x5=0:1
     % For each value of x5, loop over the possible x2, x3, and x4s.
@@ -146,13 +153,88 @@ for x5=0:1
                 % Shouldn't matter what x1 is, so make it NaN
                 x = [nan,x2,x3,x4,x5];
                 p = phi25(x)*phi345(x);
-                m5_234(x2+1,x3+1,x5+1) = m5_234(x2+1,x3+1,x5+1) + p;
+                m5_234(x2+1,x3+1,x4+1) = m5_234(x2+1,x3+1,x4+1) + p;
             end
         end
     end
 end
+% disp(m5_234)
 
-m5_234
+% Now the graph looks like this because we have eliminated x5 and made 2-3-4 into a clique:
+%  x1---x3---x4
+%  |    |    |
+%  -----x2----
+
+% For-loop step iteration 2
+% i = 4             <-- second in elim ordering
+% S_i = {2,3}       <-- nodes 2 and 3 share a potential with 4
+% PHI_i = {phi234}
+% m_4(x2,x3) = sum_x4 ( phi234(x2,x3,x4) )
+
+m4_23 = zeros(2,2);
+for x4=0:1
+    for x2=0:1
+        for x3=0:1
+            p = m5_234(x2+1,x3+1,x4+1);
+            m4_23(x2+1,x3+1) = m4_23(x2+1,x3+1) + p;
+        end
+    end
+end
+% disp(' ')
+% disp(m4_23)
+
+% Now the graph looks like this because we have eliminated x4 and made 2-3
+% into a clique (which it already was, so no new edges have been added).
+%  x1---x3
+%  |    |
+%  -----x2
+
+% For-loop step iteration 3
+% i = 3             <-- third in elim ordering
+% S_i = {1,2}       <-- nodes 1 and 2 share a potential with 3
+% PHI_i = {phi13,m4_23}     <-- potentials that we need to work with
+% m_3(x1,x2) = sum_x3 ( phi13(x1,x3)*m4_23(x2,x3 )
+
+m3_12 = zeros(2,2);
+for x3=0:1
+    for x1=0:1
+        for x2=0:1
+            x=[x1,x2,x3,nan,nan];
+            p = m4_23(x2+1,x3+1)*phi13(x);
+            m3_12(x1+1,x2+1) = m3_12(x1+1,x2+1) + p;
+        end
+    end
+end
+% disp(' ')
+% disp(m3_12)
+
+% Now the graph looks like this because we have eliminated x3 and made 1-2
+% into a clique (which it already was, so no new edges have been added).
+%  x1----
+%  |    |
+%  -----x2
+
+% For-loop step iteration 4
+% i = 2             <-- fourth in elim ordering
+% S_i = {1}         <-- node 1 shares potential(s) with 2
+% PHI_i = {phi12,m3_12}     <-- potentials that we need to work with
+% m_2(x1) = sum_x2 ( phi12(x1,x2)*m3_12(x1,x2 )
+
+m2_1 = zeros(2,1);
+for x2=0:1
+    for x1=0:1
+        x = [x1,x2,nan,nan,nan];
+        p = m3_12(x1+1,x2+1)*phi12(x);
+        m2_1(x1+1) = m2_1(x1+1) + p;
+    end
+end
+% disp(' ')
+% disp(m2_1)
+
+% Now we have a function that takes in x1 only.  This is our unnormalized
+% marginal probability distribution, and we need to normalize it.
+px1 = m2_1/sum(m2_1);
+px1equals0 = px1(1)
 
 end
 
