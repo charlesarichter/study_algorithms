@@ -1,7 +1,13 @@
 import numpy as np
 
+def factorProd(factor1,factor2):
+    # Takes in two factors and returns the factor product of the two.
+    # Output will be a factor joining a set of variables that is the union of
+    # the variables involved in the two input factors.
+    print "Factor Product"
+
 class Node:
-# Probably need a comment here
+    # Probably need a comment here
     
     def __init__(self):
         self.value = 0;
@@ -59,7 +65,6 @@ def run():
               [0, 0]],
              [[0, 0],
               [0, 1]]])
-    print cpt345
     f345 = Factor(wv345,cpt345)
     
     # # Test a 3D CPT
