@@ -1,4 +1,5 @@
 import numpy as np
+from sets import Set
 
 def factorProd(factor1,factor2):
     # Takes in two factors and returns the factor product of the two.
@@ -6,6 +7,24 @@ def factorProd(factor1,factor2):
     # the variables involved in the two input factors.
     print "Factor Product"
 
+# First figure out which variables we are going to output
+    output_set = Set([])
+    for i in xrange(len(factor1.whichvars)):
+        # print factor1.whichvars[i]
+        output_set.add(factor1.whichvars[i])
+    for i in xrange(len(factor2.whichvars)):
+        # print factor2.whichvars[i]
+        output_set.add(factor2.whichvars[i])
+
+    out_vars = list(output_set)
+
+    # Now loop over the output variables to compute products
+# # Normally, here we would do something like:
+#     for var1 in xrange(1):
+#         for var2 in xrange(1):
+#             for var3 in xrange(1):
+#                # Compute product here
+# But we can't do this, because we don't know which vars to loop over...
 class Node:
     # Probably need a comment here
     
@@ -25,6 +44,7 @@ class Factor:
         
 def run():
     # This function will build a graphical model and do some inference on it
+    elim_order = [5,4,3,2,1]
 
     # http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/...
     # 6-438-algorithms-for-inference-fall-2014/lecture-notes/MIT6_438F14_Lec7.pdf
@@ -66,6 +86,8 @@ def run():
              [[0, 0],
               [0, 1]]])
     f345 = Factor(wv345,cpt345)
+    
+    factorProd(f12,f13);
     
     # # Test a 3D CPT
     # # It should be that [k,j,i] is a binary-valued index into the array.
