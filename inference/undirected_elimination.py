@@ -1,0 +1,89 @@
+import numpy as np
+
+class Node:
+# Probably need a comment here
+    
+    def __init__(self):
+        self.value = 0;
+
+class Factor:
+    # Factor class takes whichvars and cpt as inputs
+    # -whichvars is a Python LIST of the variables included in this factor
+    # where each element of the list is an int in 0,1,...
+    # -cpt is an ndarray whose dimension is the length of list, and orders the
+    # dimensions according to the order in which variables appear in whichvars
+
+    def __init__(self,whichvars,cpt):
+        self.whichvars = whichvars
+        self.cpt = cpt
+        
+def run():
+    # This function will build a graphical model and do some inference on it
+
+    # http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/...
+    # 6-438-algorithms-for-inference-fall-2014/lecture-notes/MIT6_438F14_Lec7.pdf
+    #
+    # Graph structure:
+    #  x1---x3---x4
+    #  |    |    |
+    #  x2---x5----
+    #
+    # A clique is a subgraph (i.e., a group of nodes from the graph) in which
+    # all nodes are connected to all other nodes in the clique. A MAXIMAL
+    # clique is a clique that cannot be extended by including one more adjacent
+    # vertex. We convert the undirected graph to a factor graph by creating a
+    # factor for every clique.
+
+    # Variable domains and potential functions:
+    # Let's say for now that all variables are binary.
+
+    # Define first factor: phi12
+    wv12 = [1,2]                        # This factor deals with variables 1,2
+    cpt12 = np.array([[1, 0],[0, 1]])   # phi(x1,x2) = 1 if x1==x2
+    f12 = Factor(wv12,cpt12)
+
+    # Define second factor: phi13
+    wv13 = [1,3]                        # This factor deals with variables 1,3
+    cpt13 = np.array([[1, 0],[0, 1]])   # phi(x1,x3) = 1 if x1==x3
+    f13 = Factor(wv13,cpt13)
+
+    # Define third factor: phi25
+    wv25 = [2,5]
+    cpt25 = np.array([[1, 0],[0, 1]])
+    f25 = Factor(wv25,cpt25)
+
+    # Define fourth factor: phi345
+    wv345 = [3,4,5]
+    cpt345 = np.array( # 3 binary variables ==> 2^3 = 8 possible combinations
+            [[[1, 0],
+              [0, 0]],
+             [[0, 0],
+              [0, 1]]])
+    print cpt345
+    f345 = Factor(wv345,cpt345)
+    
+    # # Test a 3D CPT
+    # # It should be that [k,j,i] is a binary-valued index into the array.
+    # # For example, [0,1,0] should give back the third element from the "front"
+    # # of the order in which this np.array was defined. In this case "3".
+    # cptTEST3D = np.array( # 3 binary variables ==> 2^3 = 8 possible combinations
+    #         [[[1, 2],
+    #           [3, 4]],
+    #          [[5, 6],
+    #           [7, 8]]])
+    # print cptTEST3D
+    # print cptTEST3D[0,0,0]
+    # print cptTEST3D[0,0,1]
+    # print cptTEST3D[0,1,0]
+    #
+    # # Test a 2D CPT
+    # cptTEST2D = np.array(
+    #         [[1, 2],
+    #          [3, 4]])
+    # print cptTEST2D
+    # print cptTEST2D[0,0]
+    # print cptTEST2D[0,1]
+
+
+if __name__ == "__main__":
+    run()
