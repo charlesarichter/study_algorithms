@@ -18,21 +18,42 @@ class TableND(object):
         # Compute a cumulative product of dimension sizes
         self.cprod = np.ones(self.ndims + 1)
         for i in xrange(self.ndims):
-            print i
             self.cprod[self.ndims - i - 1] = self.dims[self.ndims - i - 1] * \
                     self.cprod[self.ndims - i]
 
-    def nd2ind(self, nd)
+    def nd2ind(self, nd):
         """ Convert ND index (python list, numpy array or similar) to 1D
         index """
 
         ind = 0
         for i in xrange(self.ndims):
-            print "Left off here"
+
+            if nd[self.ndims - i - 1] >= self.dims[self.ndims - i - 1]:
+                print "Tried to access an ND point out of bounds!"
+                return -1
+
+            ind += self.cprod[self.ndims - i] * nd[self.ndims - i - 1]
+        return ind
+
+    def ind2nd(self, ind):
+        """ Convert 1D index to ND index """
+
+        index = ind
+        nd = np.zeros(self.ndims)
+        for i in xrange(self.ndims):
+            nd[i] = index // self.cprod[i + 1] # // is "floor division"
+            index -= nd[i] * self.cprod[i + 1]
+        return nd
 
 if __name__ == "__main__":
 
     # Test out TableND class
     cpt = np.array([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
-    print cpt
     tablend = TableND(cpt) 
+    for i in xrange(cpt.size):
+        print i
+        nd = tablend.ind2nd(i)
+        print nd
+        ind = tablend.nd2ind(nd)
+        if ind != i:
+            print "oops!"
