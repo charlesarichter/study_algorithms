@@ -2,6 +2,7 @@
 
 import numpy as np
 from sets import Set
+from tablend import TableND
 
 def factorprod(factor1, factor2):
     """ Takes in two factors and returns the factor product of the two.
@@ -33,8 +34,8 @@ def factorprod(factor1, factor2):
     # for x in np.nditer(factor2.cpt):
     #     print x 
 
-    print factor1.get_cpt_size()
-    print factor1.get_cpt_shape()
+    # print factor1.get_cpt_size()
+    # print factor1.get_cpt_shape()
 
     for i in xrange(factor1.get_cpt_size()):
         for j in xrange(factor2.get_cpt_size()):
@@ -58,26 +59,20 @@ class Factor(object):
 
     def __init__(self, whichvars, cpt):
         self.whichvars = whichvars
-        # self.vardims = vardims
-        self.cpt = cpt
-        # self.size = self.cpt.size
+        # self.cpt = cpt
+        self.tabcpt = TableND(cpt)
 
-    def get_cpt_size(self):
-        """ foo """
-        return self.cpt.size
-
-    def get_cpt_shape(self):
-        """ foo """
-        return self.cpt.shape
-
-    def ind_to_nd(self, whichelement):
-        """ foo """
-        int 
-
-
+    # def get_cpt_size(self):
+    #     """ foo """
+    #     return self.cpt.size
+    #
+    # def get_cpt_shape(self):
+    #     """ foo """
+    #     return self.cpt.shape
+    
     def get_cpt_element(self, whichelement):
         """ foo """
-        
+        # self.tabcpt.        
 
 
 def run():
