@@ -4,6 +4,36 @@ import numpy as np
 from sets import Set
 from tablend import TableND
 
+def getprodmembers(factor1, factor2):
+    """ Compute the variables involved in the product of factor1 and factor2
+    along with their domains """
+
+    # First figure out which variables we are going to output
+    output_set = Set([])
+    output_vars = []
+    output_domains = []
+
+    for i in xrange(len(factor1.whichvars)):
+        # print factor1.whichvars[i]
+        
+        var = factor1.whichvars[i]
+        dom = factor1.domains[i]
+
+        if var not in output_set
+
+            # Add to the set
+            output_set.add(var)
+            
+            # Also add to an (ordered list)
+            output_vars.append(var)
+
+            # Also add the size of this variable's domain
+            output_domains.append(dom)
+
+    # for i in xrange(len(factor2.whichvars)):
+    #     # print factor2.whichvars[i]
+    #     output_set.add(factor2.whichvars[i])
+
 def factorprod(factor1, factor2):
     """ Takes in two factors and returns the factor product of the two.
     Output will be a factor joining a set of variables that is the union of
@@ -11,8 +41,9 @@ def factorprod(factor1, factor2):
     
     print "Factor Product"
 
-# First figure out which variables we are going to output
+    # First figure out which variables we are going to output
     output_set = Set([])
+
     for i in xrange(len(factor1.whichvars)):
         # print factor1.whichvars[i]
         output_set.add(factor1.whichvars[i])
@@ -20,7 +51,14 @@ def factorprod(factor1, factor2):
         # print factor2.whichvars[i]
         output_set.add(factor2.whichvars[i])
 
-    # out_vars = list(output_set)
+    # List of the variables that are represented in the output CPT
+    out_vars = list(output_set)
+
+    # Output variable domains
+    
+
+    # Make an empty CPT
+    # cpt = np.zeros(
 
     # Now loop over the output variables to compute products
 
@@ -38,8 +76,22 @@ def factorprod(factor1, factor2):
     # print factor1.get_cpt_shape()
 
     for i in xrange(factor1.get_cpt_size()):
+
+        varidents = factor1.get_var_idents(i)
+        print i
+        print varidents
+        print factor1.whichvars
+        # raw_input("pause")
+
         for j in xrange(factor2.get_cpt_size()):
-            print "i = ", i, ", j = ", j 
+            # print "i = ", i, ", j = ", j 
+
+            varidents = factor2.get_var_idents(i)
+            print i
+            print varidents
+            print factor2.whichvars
+            raw_input("pause")
+
 
 
 
@@ -61,11 +113,12 @@ class Factor(object):
         self.whichvars = whichvars
         # self.cpt = cpt
         self.tabcpt = TableND(cpt)
+        self.cptsize = cpt.size
 
-    # def get_cpt_size(self):
-    #     """ foo """
-    #     return self.cpt.size
-    #
+    def get_cpt_size(self):
+        """ foo """
+        return self.cptsize
+
     # def get_cpt_shape(self):
     #     """ foo """
     #     return self.cpt.shape
@@ -73,6 +126,11 @@ class Factor(object):
     def get_cpt_element(self, whichelement):
         """ foo """
         # self.tabcpt.        
+
+    def get_var_idents(self, whichelement):
+        """ Return a {list,tuple,array,?} giving the CPT position """
+        return self.tabcpt.ind2nd(whichelement)
+        
 
 
 def run():
