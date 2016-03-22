@@ -4,6 +4,10 @@ import numpy as np
 from sets import Set
 from tablend import TableND
 
+def issorted(ar):
+    """ Check if an array is sorted in ascending numerical order """
+    return all(ar[i] <= ar[i+1] for i in xrange(len(ar)-1))
+
 def getprodmembers(wv1,vals1,wv2,vals2):
     """ Compute the variables involved in the product of factor1 and factor2
     along with their domains """
@@ -152,17 +156,19 @@ class Factor(object):
      """
 
     def __init__(self, whichvars, cpt):
+        """ Set the 'names' of variables in this factor """
         self.whichvars = whichvars
         self.tabcpt = TableND(cpt)
         self.cptsize = cpt.size
 
+        """ Check to make sure whichvars is in ascending numerical order """
+        if not issorted(self.whichvars):
+            print "WARNING: whichvars is not sorted! whichvars = ", whichvars
+            exit()
+
     def get_cpt_size(self):
         """ foo """
         return self.cptsize
-
-    # def get_var_dim(self, varname):
-    #     """ Return the dimension associated with a particular variable """
-    #     return self.whichvars == varname
 
     def get_variable_values(self, index1D):
         """ Return a {list,tuple,array,?} giving the N-D CPT position """
@@ -233,6 +239,11 @@ def run():
     
     factorprod(f25, f345)
    
+    # Define third factor: phi25
+    wv21 = [2, 1]
+    cpt21 = np.array([[1, 0], [0, 1]])
+    f21 = Factor(wv21, cpt21)
+
     # # Test a 3D CPT
     # # It should be that [k,j,i] is a binary-valued index into the array.
     # # For example, [0,1,0] should give back the third element from the "front"
