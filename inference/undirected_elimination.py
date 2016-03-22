@@ -4,21 +4,19 @@ import numpy as np
 from sets import Set
 from tablend import TableND
 
-def getprodmembers_deprecated(factor1, factor2):
+def getprodmembers(wv1,vals1,wv2,vals2):
     """ Compute the variables involved in the product of factor1 and factor2
     along with their domains """
 
     # First figure out which variables we are going to output
     output_set = Set([])
     output_vars = []
-    output_domains = []
-    overlap_set = []
+    output_vals = []
+    # overlap_set = []
 
-    for i in xrange(len(factor1.whichvars)):
-        # print factor1.whichvars[i]
+    for i in xrange(len(wv1)):
         
-        var = factor1.whichvars[i]
-        dom = factor1.domains[i]
+        var = wv1[i]
 
         if var not in output_set:
 
@@ -27,13 +25,23 @@ def getprodmembers_deprecated(factor1, factor2):
             
             # Also add to an (ordered list)
             output_vars.append(var)
+            output_vals.append(vals1[i])
 
-            # Also add the size of this variable's domain
-            output_domains.append(dom)
+    for j in xrange(len(wv2)):
+        
+        var = wv2[j]
 
-    # for i in xrange(len(factor2.whichvars)):
-    #     # print factor2.whichvars[i]
-    #     output_set.add(factor2.whichvars[i])
+        if var not in output_set:
+
+            # Add to the set
+            output_set.add(var)
+            
+            # Also add to an (ordered list)
+            output_vars.append(var)
+            output_vals.append(vals2[j])
+
+    return (output_vars,output_vals)
+
 
 def factorprod_deprecated(factor1, factor2):
     """ Takes in two factors and returns the factor product of the two.
@@ -150,20 +158,23 @@ def factorprod(factor1, factor2):
         output_vars.add(factor2.whichvars[j])
     print output_vars
 
+    """ Get the domain size of the output variables """
+    return_domains = 2 * np.ones(len(output_vars))
+    print "Hardcoded domains for now: ", return_domains
+
+    """ Make a new empty factor """
+    f_return = Factor(list(output_vars), np.zeros(return_domains))
+
     """ Get a list of variables that overlap between the two factors """
     overlap_vars = list(set(factor1.whichvars) & set(factor2.whichvars))
-    print overlap_vars
+    # print overlap_vars
 
     """ For each overlap variable, record which dim of each cpt is involved """
     overlap_dims = []
     for i in xrange(len(overlap_vars)):
         d1 = factor1.whichvars.index(overlap_vars[i])
         d2 = factor2.whichvars.index(overlap_vars[i])
-        # print d1
-        # print d2
         overlap_dims.append((d1,d2))
-
-
 
     """ Iterate over all elements of both factor CPTs """
     for i in xrange(factor1.get_cpt_size()):
@@ -196,17 +207,34 @@ def factorprod(factor1, factor2):
             if not agree:
                 continue
 
-            print ""
-            print "Which variables for factor 1: " 
-            print factor1.whichvars
-            print "Values of factor 1 variables: "
-            print variable_values1
-            print "Which variables for factor 2: " 
-            print factor2.whichvars 
-            print "Values of factor 2 variables: "
-            print variable_values2
-            raw_input("pause")
+            # print ""
+            # print "Which variables for factor 1: " 
+            # print factor1.whichvars
+            # print "Values of factor 1 variables: "
+            # print variable_values1
+            # print "Which variables for factor 2: " 
+            # print factor2.whichvars 
+            # print "Values of factor 2 variables: "
+            # print variable_values2
 
+            """ Get the variables and assignments involved """
+            prodmembers = getprodmembers(factor1.whichvars,variable_values1,
+                factor2.whichvars,variable_values2)
+            prodvars = prodmembers[0]
+            prodvals = prodmembers[1]
+            # print "Output factor variables: ", prodvars
+            # print "Output factor values: ", prodvals
+
+            """ Get the activations for the two parent factors """
+            a1 = factor1.get_activationND(variable_values1)
+            a2 = factor2.get_activationND(variable_values2)
+
+            """ Multiply activations and store result in the new factor """
+            f_return.set_activationND(prodvals,a1*a2)
+
+            # raw_input("pause")
+
+    print f_return.tabcpt.data
 
 class Node:
     """ Probably need a comment here """
@@ -239,7 +267,21 @@ class Factor(object):
         """ Return a {list,tuple,array,?} giving the N-D CPT position """
         return self.tabcpt.ind2nd(index1D)
 
-    # def get_specific_variable_value(self, 
+    def get_activation1D(self, index1D):
+        """ Get an element of the CPT """
+        return self.tabcpt.get1D(index1D) 
+
+    def get_activationND(self, indexND):
+        """ Get an element of the CPT """
+        return self.tabcpt.getND(indexND) 
+
+    def set_activation1D(self, index1D, val):
+        """ Set an element of the CPT """
+        self.tabcpt.set1D(index1D,val)
+
+    def set_activationND(self, indexND, val):
+        """ Set an element of the CPT """
+        self.tabcpt.setND(indexND,val)
 
 def run():
     """ Here's a docstring! """
@@ -288,7 +330,7 @@ def run():
               [0, 1]]])
     f345 = Factor(wv345, cpt345)
     
-    factorprod(f12, f13)
+    factorprod(f25, f345)
    
     # # Test a 3D CPT
     # # It should be that [k,j,i] is a binary-valued index into the array.
