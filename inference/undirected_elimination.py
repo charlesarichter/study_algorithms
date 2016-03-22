@@ -12,7 +12,6 @@ def getprodmembers(wv1,vals1,wv2,vals2):
     output_set = Set([])
     output_vars = []
     output_vals = []
-    # overlap_set = []
 
     for i in xrange(len(wv1)):
         
@@ -42,104 +41,6 @@ def getprodmembers(wv1,vals1,wv2,vals2):
 
     return (output_vars,output_vals)
 
-
-def factorprod_deprecated(factor1, factor2):
-    """ Takes in two factors and returns the factor product of the two.
-    Output will be a factor joining a set of variables that is the union of
-    the variables involved in the two input factors. """
-    
-    print "Factor Product"
-
-    # First figure out which variables we are going to output
-    output_set = Set([])
-
-    for i in xrange(len(factor1.whichvars)):
-        # print factor1.whichvars[i]
-        output_set.add(factor1.whichvars[i])
-    for i in xrange(len(factor2.whichvars)):
-        # print factor2.whichvars[i]
-        output_set.add(factor2.whichvars[i])
-
-    # List of the variables that are represented in the output CPT
-    out_vars = list(output_set)
-
-    # Output variable domains
-    print out_vars
-
-    # Get the sizes of domains of the variables
-
-
-    # Make an empty CPT
-    # cpt = np.zeros(
-
-    # Now loop over the output variables to compute products
-
-# # Normally, here we would do something like:
-#     for var1 in xrange(1):
-#         for var2 in xrange(1):
-#             for var3 in xrange(1):
-#                # Compute product here
-# But we can't do this, because we don't know which vars to loop over...
-
-    # for x in np.nditer(factor2.cpt):
-    #     print x 
-
-    # print factor1.get_cpt_size()
-    # print factor1.get_cpt_shape()
-
-    for i in xrange(factor1.get_cpt_size()):
-
-        varidents1 = factor1.get_var_idents(i)
-        # print "Which variables for factor 1: " 
-        # print factor1.whichvars
-        # print "Values of factor 1 variables: "
-        # print varidents1
-
-        for j in xrange(factor2.get_cpt_size()):
-            # print "i = ", i, ", j = ", j 
-
-            varidents2 = factor2.get_var_idents(j)
-
-            print ""
-            print "Which variables for factor 1: " 
-            print factor1.whichvars
-            print "Values of factor 1 variables: "
-            print varidents1
-            print "Which variables for factor 2: " 
-            print factor2.whichvars
-            print "Values of factor 2 variables: "
-            print varidents2
-            raw_input("pause")
-
-            
-# def factortbd(f1_whichvars,f1_values,f2_whichvars,f2_values):
-#     """ TBD """
-#
-#     print ""
-#     print "Which variables for factor 1: " 
-#     print f1_whichvars
-#     print "Values of factor 1 variables: "
-#     print f1_values
-#     print "Which variables for factor 2: " 
-#     print f2_whichvars
-#     print "Values of factor 2 variables: "
-#     print f2_values
-#
-#     # a = set(f1_whichvars) & set(f2_whichvars)
-#     # print a
-#
-#     # a = Set([])
-#     # for i in xrange(len(f1_whichvars)):
-#     #     a.add(f1_whichvars[i])
-#     # for j in xrange(len(f2_whichvars)):
-#     #     a.add(f2_whichvars[j])
-#     #
-#     # print a
-#     #
-#
-#     raw_input("pause")
-
-
 def factorprod(factor1, factor2):
     """ Takes in two factors and returns the factor product of the two.
     Output will be a factor joining a set of variables that is the union of
@@ -156,7 +57,7 @@ def factorprod(factor1, factor2):
         output_vars.add(factor1.whichvars[i])
     for j in xrange(len(factor2.whichvars)):
         output_vars.add(factor2.whichvars[j])
-    print output_vars
+    print "Output variables: ", output_vars
 
     """ Get the domain size of the output variables """
     return_domains = 2 * np.ones(len(output_vars))
