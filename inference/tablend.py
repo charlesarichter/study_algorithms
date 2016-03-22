@@ -20,7 +20,7 @@ class TableND(object):
         """ Store the number of dimensions """
         self.ndims = len(data.shape)
 
-        # Compute a cumulative product of dimension sizes
+        """ Compute a cumulative product of dimension sizes """
         self.cprod = np.ones(self.ndims + 1)
         for i in xrange(self.ndims):
             self.cprod[self.ndims - i - 1] = self.card[self.ndims - i - 1] * \
@@ -43,16 +43,13 @@ class TableND(object):
         self.data[self.nd2ind(indexND)] = val
     
     def nd2ind(self, nd):
-        """ Convert ND index (python list, numpy array or similar) to 1D
-        index """
+        """ Convert ND index to 1D index """
 
         ind = 0
         for i in xrange(self.ndims):
-
             if nd[self.ndims - i - 1] >= self.card[self.ndims - i - 1]:
                 print "Tried to access an ND point out of bounds!"
                 return -1
-
             ind += self.cprod[self.ndims - i] * nd[self.ndims - i - 1]
         return ind
 
