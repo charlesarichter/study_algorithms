@@ -263,17 +263,31 @@ def undirectedelim(factors, elim_order):
         print "Eliminating variable: ", e
         
         involved_factors = getinvolvedfactors(factors, e)
+
+        if len(involved_factors) == 0:
+            print "Number of involved factors = 0"
+            print "...not sure what to do here..."
+
+        elif len(involved_factors) == 1:
+            print "Number of involved factors = 1"
+            f = involved_factors[0]
+
+        elif len(involved_factors) == 2:
+            print "Number of involved factors = 2"
+            f = factorprod(involved_factors[0],involved_factors[1])
+        else:
+            print "Number of involved factors > 2"
+            f = factorprod(involved_factors[0],involved_factors[1])
+            for i in xrange(2,len(involved_factors)):
+                f = factorprod(f,involved_factors[i])
+            
         for f in involved_factors:
             print f.whichvars
 
+        print "Now remove the used factors from the queue and add the newly
+        created message to the queue"
+            
         raw_input("pause")
-
-
-    
-    
-
-    
-
 
 def run():
     """ Here's a docstring! """
