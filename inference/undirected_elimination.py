@@ -65,12 +65,12 @@ def factorprod(factor1, factor2):
         output_vars.add(factor1.whichvars[i])
     for j in xrange(len(factor2.whichvars)):
         output_vars.add(factor2.whichvars[j])
-    print "Output variables: ", output_vars
-    print "Are the output variables sorted??"
+    print "  Factor product output variables: ", output_vars
+    print "--FIXME: Are the output variables sorted??"
 
     """ Get the domain size of the output variables """
     return_domains = 2 * np.ones(len(output_vars))
-    print "Hardcoded domains for now: ", return_domains
+    print "--FIXME: Hardcoded domains for now: ", return_domains
 
     """ Make a new empty factor """
     f_return = Factor(list(output_vars), np.zeros(return_domains))
@@ -144,7 +144,7 @@ def factorprod(factor1, factor2):
 
             # raw_input("pause")
 
-    print f_return.tabcpt.data
+    # print f_return.tabcpt.data
     return f_return
 
 def factormarginal(factor,whichvar):
@@ -161,7 +161,7 @@ def factormarginal(factor,whichvar):
     # print indmarginal
 
     return_domains = 2 * np.ones(len(output_vars))
-    print "Hardcoded domains for now: ", return_domains
+    print "--FIXME: Hardcoded domains for now: ", return_domains
 
     f_return = Factor(output_vars, np.zeros(return_domains))
 
@@ -181,11 +181,12 @@ def factormarginal(factor,whichvar):
         act = factor.get_activationND(variable_values)
         f_return.set_activationND(var_values_list,act_return + act)
 
-    print f_return.tabcpt.data
+    # print f_return.tabcpt.data
     return f_return
 
 def factornormalize(factor):
     """ Normalize values in CPT of a factor and output a new factor """
+
 
 class Factor(object):
     """ Factor class takes whichvars and cpt as inputs
@@ -208,8 +209,12 @@ class Factor(object):
 
     def __str__(self):
         """ String representation of this factor """
-        """ Fill me in! """
-        return 'foo'
+        return 'Factor with variables: ' + str(self.whichvars)
+
+    def normalize(self):
+        """ Normalize the values in the CPT """
+        self.tabcpt.data = [float(x)/sum(self.tabcpt.data) for x in \
+                self.tabcpt.data]
 
     def includes_var(self, var):
         """ Return whether this factor includes the specified variable """
@@ -265,30 +270,45 @@ def undirectedelim(factors, elim_order):
         involved_factors = getinvolvedfactors(factors, e)
 
         if len(involved_factors) == 0:
-            print "Number of involved factors = 0"
-            print "...not sure what to do here..."
+            print "  Number of involved factors = 0"
+            print "WARNING: Not sure what to do here..."
 
         elif len(involved_factors) == 1:
-            print "Number of involved factors = 1"
+            print "  Number of involved factors = 1"
             f = involved_factors[0]
 
         elif len(involved_factors) == 2:
-            print "Number of involved factors = 2"
+            print "  Number of involved factors = 2"
             f = factorprod(involved_factors[0],involved_factors[1])
         else:
-            print "Number of involved factors > 2"
+            print "  Number of involved factors > 2"
             f = factorprod(involved_factors[0],involved_factors[1])
             for i in xrange(2,len(involved_factors)):
                 f = factorprod(f,involved_factors[i])
-            
-        for f in involved_factors:
-            print f.whichvars
 
-        print "Now remove the used factors from the queue and add the newly
-        created message to the queue"
-            
-        raw_input("pause")
+        """ Remove the involved factors from the queue """
+        for f_used in involved_factors:
+            # print f.whichvars
+            factors.remove(f_used)
 
+        """ Now that we have computed the factor product sum out e """
+        f = factormarginal(f, e) 
+
+        """ Add the newly created message to the queue """
+        factors.append(f)
+
+        # print "List of factors now has length: ", len(factors)
+        # print "and add the newly created message to the queue"
+        
+            
+        # raw_input("pause")
+
+    # print "Size of remaining factor list: ", len(factors)
+    f = factors[0] 
+    f.normalize()
+    # print f.tabcpt.data
+    return f
+ 
 def run():
     """ Here's a docstring! """
 
@@ -296,7 +316,8 @@ def run():
     factors = []
 
     # This function will build a graphical model and do some inference on it
-    elim_order = [5, 4, 3, 2, 1]
+    elim_order = [5, 4, 3, 2]
+    # elim_order = [4, 5, 2, 3]
 
     #http://ocw.mit.edu/courses/electrical-engineering-and-computer-science/...
     #6-438-algorithms-for-inference-fall-2014/lecture-notes/MIT6_438F14_Lec7.pdf
@@ -346,7 +367,8 @@ def run():
     factors.append(f345)
 
     """ Try undirected elimination """
-    undirectedelim(factors,elim_order)
+    f = undirectedelim(factors,elim_order)
+    print f.tabcpt.data
 
     # """ Try a factor product """
     # f2345 = factorprod(f25, f345)
