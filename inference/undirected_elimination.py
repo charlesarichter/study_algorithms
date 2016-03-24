@@ -10,9 +10,13 @@ def issorted(ar):
 
 def getprodmembers(wv1,vals1,wv2,vals2):
     """ Compute the variables involved in the product of factor1 and factor2
-    along with their domains """
+    along with their domains 
+   
+    Input: Which variables involved in both factors, and their values
+    Output: The union of the two sets of variables, and their values
+    
+    """
 
-    # First figure out which variables we are going to output
     output_set = Set([])
     output_vars = []
     output_vals = []
@@ -62,6 +66,7 @@ def factorprod(factor1, factor2):
     for j in xrange(len(factor2.whichvars)):
         output_vars.add(factor2.whichvars[j])
     print "Output variables: ", output_vars
+    print "Are the output variables sorted??"
 
     """ Get the domain size of the output variables """
     return_domains = 2 * np.ones(len(output_vars))
@@ -140,12 +145,47 @@ def factorprod(factor1, factor2):
             # raw_input("pause")
 
     print f_return.tabcpt.data
+    return f_return
 
-class Node:
-    """ Probably need a comment here """
-    
-    def __init__(self):
-        self.value = 0;
+def factormarginal(factor,whichvar):
+    """ Sum over whichvar and output a new factor """
+
+    # print factor.whichvars
+    # print factor.whichvars.index(whichvar)
+    output_vars = list(factor.whichvars)
+    # print output_vars
+    output_vars = [x for x in output_vars if x != whichvar]
+    # print output_vars
+
+    indmarginal = factor.whichvars.index(whichvar)
+    # print indmarginal
+
+    return_domains = 2 * np.ones(len(output_vars))
+    print "Hardcoded domains for now: ", return_domains
+
+    f_return = Factor(output_vars, np.zeros(return_domains))
+
+    """ Iterate over all entries in the input factor """
+    for i in xrange(factor.get_cpt_size()):
+        variable_values = factor.get_variable_values(i)
+        # print variable_values
+
+        """ Get the index into the output factor """
+        # print indmarginal
+        var_values_list = list(variable_values)
+        del var_values_list[indmarginal]
+        # print var_values_list
+
+        """ Increment output factor """
+        act_return = f_return.get_activationND(var_values_list)
+        act = factor.get_activationND(variable_values)
+        f_return.set_activationND(var_values_list,act_return + act)
+
+    print f_return.tabcpt.data
+    return f_return
+
+def factornormalize(factor):
+    """ Normalize values in CPT of a factor and output a new factor """
 
 class Factor(object):
     """ Factor class takes whichvars and cpt as inputs
@@ -166,13 +206,26 @@ class Factor(object):
             print "WARNING: whichvars is not sorted! whichvars = ", whichvars
             exit()
 
+    def __str__(self):
+        """ String representation of this factor """
+        """ Fill me in! """
+        return 'foo'
+
+    def includes_var(self, var):
+        """ Return whether this factor includes the specified variable """
+        return var in self.whichvars
+
     def get_cpt_size(self):
-        """ foo """
+        """ Return number of elements in the CPT """
         return self.cptsize
 
     def get_variable_values(self, index1D):
         """ Return a {list,tuple,array,?} giving the N-D CPT position """
         return self.tabcpt.ind2nd(index1D)
+
+    def get_activationName(self, name):
+        """ Get an element of the CPT, querying by name """
+        """ Fill me in! """
 
     def get_activation1D(self, index1D):
         """ Get an element of the CPT """
@@ -182,6 +235,10 @@ class Factor(object):
         """ Get an element of the CPT """
         return self.tabcpt.getND(indexND) 
 
+    def set_activationName(self, name, val):
+        """ Set an element of the CPT, querying by name """
+        """ Fill me in! """
+
     def set_activation1D(self, index1D, val):
         """ Set an element of the CPT """
         self.tabcpt.set1D(index1D,val)
@@ -190,8 +247,39 @@ class Factor(object):
         """ Set an element of the CPT """
         self.tabcpt.setND(indexND,val)
 
+def getinvolvedfactors(factors, e):
+    """ Return list of factors that involve variable e """
+    involved_factors = []
+    for f in factors:
+        if f.includes_var(e):
+            involved_factors.append(f)
+    return involved_factors
+
+def undirectedelim(factors, elim_order):
+    """ Takes in a set of factors and an elimination order and computes the
+    marginal probability of the final variable in the elimination order """
+
+    for e in elim_order:
+        print "Eliminating variable: ", e
+        
+        involved_factors = getinvolvedfactors(factors, e)
+        for f in involved_factors:
+            print f.whichvars
+
+        raw_input("pause")
+
+
+    
+    
+
+    
+
+
 def run():
     """ Here's a docstring! """
+
+    # List of factors
+    factors = []
 
     # This function will build a graphical model and do some inference on it
     elim_order = [5, 4, 3, 2, 1]
@@ -215,18 +303,23 @@ def run():
 
     # Define first factor: phi12
     wv12 = [1, 2]                        # This factor deals with variables 1,2
-    cpt12 = np.array([[1, 0], [0, 1]])   # phi(x1,x2) = 1 if x1==x2
+    # cpt12 = np.array([[1, 0], [0, 1]])   # phi(x1,x2) = 1 if x1==x2
+    cpt12 = np.array([[1, 0], [0, 2]])   # phi(x1,x2) = 1 if x1==x2
     f12 = Factor(wv12, cpt12)
+    factors.append(f12)
 
     # Define second factor: phi13
     wv13 = [1, 3]                        # This factor deals with variables 1,3
-    cpt13 = np.array([[1, 0], [0, 1]])   # phi(x1,x3) = 1 if x1==x3
+    # cpt13 = np.array([[1, 0], [0, 1]])   # phi(x1,x3) = 1 if x1==x3
+    cpt13 = np.array([[1, 0], [0, .75]])   # phi(x1,x3) = 1 if x1==x3
     f13 = Factor(wv13, cpt13)
+    factors.append(f13)
 
     # Define third factor: phi25
     wv25 = [2, 5]
     cpt25 = np.array([[1, 0], [0, 1]])
     f25 = Factor(wv25, cpt25)
+    factors.append(f25)
 
     # Define fourth factor: phi345
     wv345 = [3, 4, 5]
@@ -236,13 +329,38 @@ def run():
              [[0, 0],
               [0, 1]]])
     f345 = Factor(wv345, cpt345)
-    
-    factorprod(f25, f345)
-   
-    # Define third factor: phi25
-    wv21 = [2, 1]
-    cpt21 = np.array([[1, 0], [0, 1]])
-    f21 = Factor(wv21, cpt21)
+    factors.append(f345)
+
+    """ Try undirected elimination """
+    undirectedelim(factors,elim_order)
+
+    # """ Try a factor product """
+    # f2345 = factorprod(f25, f345)
+    #
+    # """ Try a factor marginalization """
+    # f234 = factormarginal(f2345, 5)
+    #
+    # """ Try a factor marginalization """
+    # f23 = factormarginal(f234, 4)
+    #
+    # """ Try a factor product """
+    # f123 = factorprod(f23, f13)
+    #
+    # """ Try a factor marginalization """
+    # m12 = factormarginal(f123, 3)
+    #
+    # """ Try a factor product """
+    # mm12 = factorprod(m12, f12)
+    #
+    # """ Try a factor marginalization """
+    # f1 = factormarginal(mm12, 2)
+    # print "-------------------------"
+    # print "Result: ", f1.tabcpt.data
+
+    # # Define a factor with variables "out of order" to test if it gets caught
+    # wv21 = [2, 1]
+    # cpt21 = np.array([[1, 0], [0, 1]])
+    # f21 = Factor(wv21, cpt21)
 
     # # Test a 3D CPT
     # # It should be that [k,j,i] is a binary-valued index into the array.
