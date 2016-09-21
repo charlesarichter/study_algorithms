@@ -57,7 +57,7 @@ def merge(A, p, q, r):
 
     return A
 
-def merge_sort(A, p, r):
+def merge_sort(A, p=None, r=None):
     """Merge Sort algorithm.
 
     Args:
@@ -69,6 +69,14 @@ def merge_sort(A, p, r):
         An array whose elements in the range A[p,...,r] are sorted.
 
     """
+
+    # If we call merge_sort without specifying p or r, we should assume that we
+    # want to sort the entire array A, so we set p and r to be the indices of
+    # the first and last elements in A.
+    if p == None:
+        p = 0
+    if r == None:
+        r = len(A) - 1
 
     # If p >= r, then p must be equal to r, meaning we have only one element of
     # interest in our input region, which is sorted by definiteion. We should

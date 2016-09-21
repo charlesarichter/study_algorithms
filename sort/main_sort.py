@@ -3,6 +3,7 @@
 
 import argparse
 from insertion_sort import insertion_sort
+from merge_sort import merge_sort
 
 def main():
     """Call various sorting algorithms on the supplied input values.
@@ -25,6 +26,9 @@ def main():
     sorted_list = insertion_sort(input_list)
     print 'Insertion Sort: ' + str(sorted_list)
 
+    # Merge Sort
+    sorted_list = merge_sort(input_list)
+    print 'Merge Sort: ' + str(sorted_list)
 
 if __name__ == "__main__":
     main()
