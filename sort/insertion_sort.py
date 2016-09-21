@@ -5,8 +5,6 @@ that's ok because this code is intended for personal learning/study purposes.
 
 """
 
-import argparse
-
 def insertion_sort(input_list):
     """Sort the elements in input_list in ascending numerical order.
 
@@ -55,28 +53,3 @@ def insertion_sort(input_list):
         # raw_input("")
 
     return input_list
-
-
-def main():
-    """Call insertion_sort on the supplied input values.
-
-    Take in list of numbers, convert them to a list, sort them using
-    insertion_sort and print the sorted list.
-
-    """
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', nargs='+',
-            help='<Required> Input array to be sorted', required=True)
-    args = parser.parse_args()
-
-    # List comprehension conversion to list of ints
-    input_list = [int(i) for i in args.input]
-
-    print 'Sorting the list: ' + str(input_list)
-    sorted_list = insertion_sort(input_list)
-    print 'Sorted list: ' + str(sorted_list)
-
-
-if __name__ == "__main__":
-    main()
