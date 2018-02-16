@@ -73,8 +73,8 @@ void BinaryHeap::BubbleUp(const int ind) {
   int parent_ind = GetParentIndex(ind);
   // std::cerr << "Parent of " << ind << " is " << parent_ind << std::endl;
 
-  int parent_value = data_.at(parent_ind);
-  int child_value = data_.at(ind);
+  double parent_value = data_.at(parent_ind);
+  double child_value = data_.at(ind);
   if (child_value < parent_value)  {
     // Swap
     data_.at(ind) = parent_value;
