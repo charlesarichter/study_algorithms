@@ -120,7 +120,8 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
   //
   // Eigen::MatrixXd dydA0_test =
   //     activation_gradients.at(1) *
-  //     (params.weights.at(1) * (activation_gradients.at(0) * input.transpose()));
+  //     (params.weights.at(1) * (activation_gradients.at(0) *
+  //     input.transpose()));
   // std::cerr << "Gradient dydA0_test..." << dydA0_test << std::endl;
 
   // std::cerr << "1: " << activation_gradients.at(1) << std::endl;
@@ -132,7 +133,7 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
                            Eigen::VectorXd* activation_gradient) {
-  Eigen::VectorXd output;
+  Eigen::VectorXd output(input.size());
   switch (activation_function) {
     case ActivationFunction::LINEAR: {
       output = input;
@@ -144,6 +145,13 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
       break;
     }
     case ActivationFunction::SIGMOID: {
+      *activation_gradient = Eigen::VectorXd::Zero(input.size());
+      for (size_t i = 0; i < input.size(); ++i) {
+        const double f = 1 / (1 + exp(-1 * input(i)));
+        output(i) = f;
+        (*activation_gradient)(i) = f * (1 - f);
+      }
+
       break;
     }
     case ActivationFunction::RELU: {
