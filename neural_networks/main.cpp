@@ -359,37 +359,18 @@ void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
   // it so the dimension agrees with l1_post_act, which is 3x1 or 1x3.
 
   // Here, l2_post_act_grad is being multiplied by something that is 1x3 or 3x1
-  Eigen::VectorXd l2_post_act_grad_repmat(3);
-  l2_post_act_grad_repmat(0) = l2_post_act_grad(0);
-  l2_post_act_grad_repmat(1) = l2_post_act_grad(0);
-  l2_post_act_grad_repmat(2) = l2_post_act_grad(0);
+  // Eigen::VectorXd l2_post_act_grad_repmat(3);
+  // l2_post_act_grad_repmat(0) = l2_post_act_grad(0);
+  // l2_post_act_grad_repmat(1) = l2_post_act_grad(0);
+  // l2_post_act_grad_repmat(2) = l2_post_act_grad(0);
 
   // dy/dA2 = f2'(layer_2_pre_act) * layer_1_post_act
-  // const Eigen::VectorXd dydw2 =
-  //     l2_post_act_grad_repmat.cwiseProduct(l1_post_act);
   const Eigen::VectorXd dydw2 =
       l2_post_act_grad.transpose() * l1_post_act.transpose();
   std::cerr << "dydw2 " << std::endl << dydw2 << std::endl;
 
   // dy/dA1 = f2'(layer_2_pre_act) * A2
   //         * f1'(layer_1_pre_act) * layer_0_post_act
-  // const Eigen::MatrixXd dydw1 =
-  //     (l2_post_act_grad_repmat.cwiseProduct(nn.weights.at(2).transpose()))
-  //         .cwiseProduct(l1_post_act_grad) *
-  //     l0_post_act.transpose();
-  // std::cerr << "dydw1 " << std::endl << dydw1 << std::endl;
-  // std::cerr << "l2_post_act_grad: " << std::endl
-  //           << l2_post_act_grad << std::endl;
-  // std::cerr << "nn.weights.at(2): " << std::endl
-  //           << nn.weights.at(2) << std::endl;
-  // std::cerr << "l1_post_act_grad: " << std::endl
-  //           << l1_post_act_grad << std::endl;
-  // std::cerr << "l0_post_act: " << std::endl << l0_post_act << std::endl;
-
-  // const Eigen::MatrixXd a =
-  //     l2_post_act_grad(0) *
-  //     nn.weights.at(2).cwiseProduct(l1_post_act_grad.transpose()).transpose()
-  //     * l0_post_act.transpose();
   const Eigen::MatrixXd dydw1 =
       (l2_post_act_grad.transpose() * nn.weights.at(2))
           .cwiseProduct(l1_post_act_grad.transpose())
@@ -400,67 +381,14 @@ void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
   // dy/dA0 = f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * A1
   //        * f0'(layer_0_pre_act) * input
-  // const Eigen::MatrixXd part_1 =
-  //     ((l2_post_act_grad_repmat.cwiseProduct(nn.weights.at(2).transpose()))
-  //          .cwiseProduct(l1_post_act_grad));
-  // const Eigen::MatrixXd part_2 = nn.weights.at(1);
-  // const Eigen::MatrixXd part_3 = l0_post_act_grad;
-  // const Eigen::MatrixXd part_4 = input;
-  // std::cerr << "part 1 " << std::endl << part_1 << std::endl;
-  // std::cerr << "part 2 " << std::endl << part_2 << std::endl;
-  // std::cerr << "part 3 " << std::endl << part_3 << std::endl;
-  // std::cerr << "part 4 " << std::endl << part_4 << std::endl;
-
-  // const Eigen::MatrixXd part_1 =
-  //     ((l2_post_act_grad_repmat.cwiseProduct(nn.weights.at(2).transpose()))
-  //          .cwiseProduct(l1_post_act_grad));
-  // const Eigen::MatrixXd part_234 =
-  //     (nn.weights.at(1) * l0_post_act_grad) * input.transpose();
-  // std::cerr << "part 234 " << std::endl << part_234 << std::endl;
-  // const Eigen::MatrixXd part_1234 =
-
-  // std::cerr << "l2 post act grad " << std::endl
-  //           << l2_post_act_grad << std::endl;
-  // std::cerr << "nn.weights.at(2) " << std::endl
-  //           << nn.weights.at(2) << std::endl;
-  // std::cerr << "l1 post act grad " << std::endl
-  //           << l1_post_act_grad << std::endl;
-  // std::cerr << "nn.weights.at(1) " << std::endl
-  //           << nn.weights.at(1) << std::endl;
-  // std::cerr << "l0 post act grad " << std::endl
-  //           << l0_post_act_grad << std::endl;
-
-  // std::cerr << "nn.weights.at(2).transpose().cwiseProduct(l1_post_act_grad) "
-  //           << std::endl
-  //           << nn.weights.at(2).transpose().cwiseProduct(l1_post_act_grad)
-  //           << std::endl;
-  //
-  // Eigen::MatrixXd foo(3, 3);
-  // foo.col(0) = l0_post_act_grad;
-  // foo.col(1) = l0_post_act_grad;
-  // foo.col(2) = l0_post_act_grad;
-  // std::cerr << "nn.weights.at(1).transpose().cwiseProduct(foo) " << std::endl
-  //           << nn.weights.at(1).transpose().cwiseProduct(foo) << std::endl;
-
-  // std::cerr << "nn.weights.at(1).transpose().cwiseProduct(l0_post_act_grad) "
-  //           << std::endl
-  //           << nn.weights.at(1).transpose().cwiseProduct(l0_post_act_grad)
-  //           << std::endl;
-
-  // Eigen::VectorXd dydw0 = l2_post_act_grad *
-  //                         (nn.weights.at(2) * l1_post_act_grad) *
-  //                         (nn.weights.at(1) * l0_post_act_grad) * input;
-  // Eigen::VectorXd dydw0 =
-  //     l2_post_act_grad(0) *
-  //     nn.weights.at(2).transpose().cwiseProduct(l1_post_act_grad) *
-  //     nn.weights.at(1).transpose().cwiseProduct(foo) * input;
-  // Eigen::VectorXd dydw0 =
-  //     nn.weights.at(1).transpose().cwiseProduct(foo) * input.transpose();
-
-  // Eigen::VectorXd dydw0 = HadamardProduct(l2_post_act_grad, nn.weights.at(2))
-  // *
-  //                         HadamardProduct(l1_post_act_grad, nn.weights.at(1))
-  //                         * l0_post_act_grad * input;
+  const Eigen::MatrixXd dydw0 =
+      ((l2_post_act_grad.transpose() * nn.weights.at(2))
+           .cwiseProduct(l1_post_act_grad.transpose()) *
+       nn.weights.at(1))
+          .cwiseProduct(l0_post_act_grad.transpose())
+          .transpose() *
+      input.transpose();
+  std::cerr << "dydw0 " << std::endl << dydw0 << std::endl;
 }
 
 int main() {
