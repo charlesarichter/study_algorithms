@@ -11,7 +11,8 @@ void ComputeGradientLayerZeroWeightsLinear(const NeuralNetworkParameters& nn,
 
   // Compute network output for the original network.
   Eigen::VectorXd output;
-  EvaluateNetwork(input, nn, &output);
+  std::vector<Eigen::MatrixXd> weight_gradients;
+  EvaluateNetwork(input, nn, &output, &weight_gradients);
 
   // Gradient matrix to be filled in.
   Eigen::MatrixXd dydw0 = Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
@@ -28,7 +29,9 @@ void ComputeGradientLayerZeroWeightsLinear(const NeuralNetworkParameters& nn,
 
       // Compute network output for the perturbed network.
       Eigen::VectorXd output_perturbation;
-      EvaluateNetwork(input, nn_perturbation, &output_perturbation);
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation;
+      EvaluateNetwork(input, nn_perturbation, &output_perturbation,
+                      &weight_gradients_perturbation);
 
       // Compute scalar value of numerical gradient.
       const Eigen::VectorXd vector_grad = (output_perturbation - output) / dw;
@@ -68,7 +71,8 @@ void ComputeGradientLayerOneWeightsLinear(const NeuralNetworkParameters& nn,
 
   // Compute network output for the original network.
   Eigen::VectorXd output;
-  EvaluateNetwork(input, nn, &output);
+  std::vector<Eigen::MatrixXd> weight_gradients;
+  EvaluateNetwork(input, nn, &output, &weight_gradients);
 
   // Gradient matrix to be filled in.
   Eigen::MatrixXd dydw1 = Eigen::MatrixXd::Zero(w1.rows(), w1.cols());
@@ -85,7 +89,9 @@ void ComputeGradientLayerOneWeightsLinear(const NeuralNetworkParameters& nn,
 
       // Compute network output for the perturbed network.
       Eigen::VectorXd output_perturbation;
-      EvaluateNetwork(input, nn_perturbation, &output_perturbation);
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation;
+      EvaluateNetwork(input, nn_perturbation, &output_perturbation,
+                      &weight_gradients_perturbation);
 
       // Compute scalar value of numerical gradient.
       const Eigen::VectorXd vector_grad = (output_perturbation - output) / dw;
@@ -125,7 +131,8 @@ void ComputeGradientLayerZeroWeightsSigmoid(const NeuralNetworkParameters& nn,
 
   // Compute network output for the original network.
   Eigen::VectorXd output;
-  EvaluateNetwork(input, nn, &output);
+  std::vector<Eigen::MatrixXd> weight_gradients;
+  EvaluateNetwork(input, nn, &output, &weight_gradients);
 
   // Gradient matrix to be filled in.
   // Eigen::MatrixXd dydw0 = Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
@@ -142,7 +149,9 @@ void ComputeGradientLayerZeroWeightsSigmoid(const NeuralNetworkParameters& nn,
 
       // Compute network output for the perturbed network.
       Eigen::VectorXd output_perturbation;
-      EvaluateNetwork(input, nn_perturbation, &output_perturbation);
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation;
+      EvaluateNetwork(input, nn_perturbation, &output_perturbation,
+                      &weight_gradients_perturbation);
 
       // Compute scalar value of numerical gradient.
       const Eigen::VectorXd vector_grad = (output_perturbation - output) / dw;
@@ -203,7 +212,8 @@ void ComputeGradientLayerOneWeightsSigmoid(const NeuralNetworkParameters& nn,
 
   // Compute network output for the original network.
   Eigen::VectorXd output;
-  EvaluateNetwork(input, nn, &output);
+  std::vector<Eigen::MatrixXd> weight_gradients;
+  EvaluateNetwork(input, nn, &output, &weight_gradients);
 
   // Gradient matrix to be filled in.
   // Eigen::MatrixXd dydw1 = Eigen::MatrixXd::Zero(w1.rows(), w1.cols());
@@ -220,7 +230,9 @@ void ComputeGradientLayerOneWeightsSigmoid(const NeuralNetworkParameters& nn,
 
       // Compute network output for the perturbed network.
       Eigen::VectorXd output_perturbation;
-      EvaluateNetwork(input, nn_perturbation, &output_perturbation);
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation;
+      EvaluateNetwork(input, nn_perturbation, &output_perturbation,
+                      &weight_gradients_perturbation);
 
       // Compute scalar value of numerical gradient.
       const Eigen::VectorXd vector_grad = (output_perturbation - output) / dw;
@@ -254,13 +266,190 @@ void ComputeGradientLayerOneWeightsSigmoid(const NeuralNetworkParameters& nn,
             << dydw1_vectorized - dydw1_numerical << std::endl;
 }
 
+Eigen::MatrixXd HadamardProduct(const Eigen::MatrixXd& a,
+                                const Eigen::MatrixXd& b) {}
+
+void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
+    const NeuralNetworkParameters& nn, const Eigen::VectorXd& input) {
+  for (size_t layer = 0; layer < 3; ++layer) {
+    const Eigen::MatrixXd& w0 = nn.weights.at(layer);
+    // std::cerr << "Layer Zero Input: " << input.transpose() << std::endl;
+    // std::cerr << "Layer Zero Weights 0: " << std::endl << w0 << std::endl;
+
+    // Compute network output for the original network.
+    Eigen::VectorXd output;
+    std::vector<Eigen::MatrixXd> weight_gradients;
+    EvaluateNetwork(input, nn, &output, &weight_gradients);
+
+    // Gradient matrix to be filled in.
+    // Eigen::MatrixXd dydw0 = Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
+    Eigen::MatrixXd dydw0_numerical =
+        Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
+    Eigen::MatrixXd dydw0_vectorized =
+        Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
+
+    const double dw = 1e-3;
+    for (size_t i = 0; i < w0.rows(); ++i) {
+      for (size_t j = 0; j < w0.cols(); ++j) {
+        // Perturb this particular element of the weight matrix.
+        NeuralNetworkParameters nn_perturbation_plus = nn;
+        nn_perturbation_plus.weights.at(layer)(i, j) += dw;
+
+        // Compute network output for the perturbed network.
+        Eigen::VectorXd output_perturbation_plus;
+        std::vector<Eigen::MatrixXd> weight_gradients_perturbation_plus;
+        EvaluateNetwork(input, nn_perturbation_plus, &output_perturbation_plus,
+                        &weight_gradients_perturbation_plus);
+
+        // Perturb this particular element of the weight matrix.
+        NeuralNetworkParameters nn_perturbation_minus = nn;
+        nn_perturbation_minus.weights.at(layer)(i, j) -= dw;
+
+        // Compute network output for the perturbed network.
+        Eigen::VectorXd output_perturbation_minus;
+        std::vector<Eigen::MatrixXd> weight_gradients_perturbation_minus;
+        EvaluateNetwork(input, nn_perturbation_minus,
+                        &output_perturbation_minus,
+                        &weight_gradients_perturbation_minus);
+
+        // Compute scalar value of numerical gradient.
+        const Eigen::VectorXd vector_grad =
+            (output_perturbation_plus - output_perturbation_minus) / (2 * dw);
+        assert(vector_grad.size() == 1);
+        const double scalar_grad = vector_grad(0);
+        dydw0_numerical(i, j) = scalar_grad;
+      }
+    }
+    std::cerr << "derivative of layer " << layer << " weights:" << std::endl
+              << dydw0_numerical << std::endl;
+  }
+
+  // dy/dA2 = f2'(layer_2_pre_act) * layer_1_post_act
+  // dy/dA1 = f2'(layer_2_pre_act) * A2
+  //         * f1'(layer_1_pre_act) * layer_0_post_act
+  // dy/dA0 = f2'(layer_2_pre_act) * A2
+  //        * f1'(layer_1_pre_act) * A1
+  //        * f0'(layer_0_pre_act) * input
+
+  const Eigen::VectorXd l0_pre_act = nn.weights.at(0) * input + nn.biases.at(0);
+
+  Eigen::VectorXd l0_post_act_grad;
+  const Eigen::VectorXd l0_post_act =
+      Activation(l0_pre_act, ActivationFunction::SIGMOID, &l0_post_act_grad);
+
+  const Eigen::VectorXd l1_pre_act =
+      nn.weights.at(1) * l0_post_act + nn.biases.at(1);
+
+  Eigen::VectorXd l1_post_act_grad;
+  const Eigen::VectorXd l1_post_act =
+      Activation(l1_pre_act, ActivationFunction::SIGMOID, &l1_post_act_grad);
+
+  const Eigen::VectorXd l2_pre_act =
+      nn.weights.at(2) * l1_post_act + nn.biases.at(2);
+
+  Eigen::VectorXd l2_post_act_grad;
+  const Eigen::VectorXd l2_post_act =
+      Activation(l2_pre_act, ActivationFunction::SIGMOID, &l2_post_act_grad);
+
+  // std::cerr << "l2 post act grad " << std::endl
+  //           << l2_post_act_grad << std::endl;
+  // std::cerr << "l1 post act " << std::endl << l1_post_act << std::endl;
+
+  // l2_post_act_grad is 1x1, so we need to do a cwise product and expand/copy
+  // it so the dimension agrees with l1_post_act, which is 3x1 or 1x3.
+
+  // Here, l2_post_act_grad is being multiplied by something that is 1x3 or 3x1
+  Eigen::VectorXd l2_post_act_grad_repmat(3);
+  l2_post_act_grad_repmat(0) = l2_post_act_grad(0);
+  l2_post_act_grad_repmat(1) = l2_post_act_grad(0);
+  l2_post_act_grad_repmat(2) = l2_post_act_grad(0);
+
+  // dy/dA2 = f2'(layer_2_pre_act) * layer_1_post_act
+  const Eigen::VectorXd dydw2 =
+      l2_post_act_grad_repmat.cwiseProduct(l1_post_act);
+  std::cerr << "dydw2 " << std::endl << dydw2 << std::endl;
+
+  // dy/dA1 = f2'(layer_2_pre_act) * A2
+  //         * f1'(layer_1_pre_act) * layer_0_post_act
+  const Eigen::MatrixXd dydw1 =
+      (l2_post_act_grad_repmat.cwiseProduct(nn.weights.at(2).transpose()))
+          .cwiseProduct(l1_post_act_grad) *
+      l0_post_act.transpose();
+  std::cerr << "dydw1 " << std::endl << dydw1 << std::endl;
+
+  // dy/dA0 = f2'(layer_2_pre_act) * A2
+  //        * f1'(layer_1_pre_act) * A1
+  //        * f0'(layer_0_pre_act) * input
+  const Eigen::MatrixXd part_1 =
+      ((l2_post_act_grad_repmat.cwiseProduct(nn.weights.at(2).transpose()))
+           .cwiseProduct(l1_post_act_grad));
+  const Eigen::MatrixXd part_2 = nn.weights.at(1);
+  const Eigen::MatrixXd part_3 = l0_post_act_grad;
+  const Eigen::MatrixXd part_4 = input;
+  std::cerr << "part 1 " << std::endl << part_1 << std::endl;
+  std::cerr << "part 2 " << std::endl << part_2 << std::endl;
+  std::cerr << "part 3 " << std::endl << part_3 << std::endl;
+  std::cerr << "part 4 " << std::endl << part_4 << std::endl;
+
+  // const Eigen::MatrixXd part_1 =
+  //     ((l2_post_act_grad_repmat.cwiseProduct(nn.weights.at(2).transpose()))
+  //          .cwiseProduct(l1_post_act_grad));
+  // const Eigen::MatrixXd part_234 =
+  //     (nn.weights.at(1) * l0_post_act_grad) * input.transpose();
+  // std::cerr << "part 234 " << std::endl << part_234 << std::endl;
+  // const Eigen::MatrixXd part_1234 =
+
+  // std::cerr << "l2 post act grad " << std::endl
+  //           << l2_post_act_grad << std::endl;
+  // std::cerr << "nn.weights.at(2) " << std::endl
+  //           << nn.weights.at(2) << std::endl;
+  // std::cerr << "l1 post act grad " << std::endl
+  //           << l1_post_act_grad << std::endl;
+  // std::cerr << "nn.weights.at(1) " << std::endl
+  //           << nn.weights.at(1) << std::endl;
+  // std::cerr << "l0 post act grad " << std::endl
+  //           << l0_post_act_grad << std::endl;
+
+  // std::cerr << "nn.weights.at(2).transpose().cwiseProduct(l1_post_act_grad) "
+  //           << std::endl
+  //           << nn.weights.at(2).transpose().cwiseProduct(l1_post_act_grad)
+  //           << std::endl;
+  //
+  // Eigen::MatrixXd foo(3, 3);
+  // foo.col(0) = l0_post_act_grad;
+  // foo.col(1) = l0_post_act_grad;
+  // foo.col(2) = l0_post_act_grad;
+  // std::cerr << "nn.weights.at(1).transpose().cwiseProduct(foo) " << std::endl
+  //           << nn.weights.at(1).transpose().cwiseProduct(foo) << std::endl;
+
+  // std::cerr << "nn.weights.at(1).transpose().cwiseProduct(l0_post_act_grad) "
+  //           << std::endl
+  //           << nn.weights.at(1).transpose().cwiseProduct(l0_post_act_grad)
+  //           << std::endl;
+
+  // Eigen::VectorXd dydw0 = l2_post_act_grad *
+  //                         (nn.weights.at(2) * l1_post_act_grad) *
+  //                         (nn.weights.at(1) * l0_post_act_grad) * input;
+  // Eigen::VectorXd dydw0 =
+  //     l2_post_act_grad(0) *
+  //     nn.weights.at(2).transpose().cwiseProduct(l1_post_act_grad) *
+  //     nn.weights.at(1).transpose().cwiseProduct(foo) * input;
+  // Eigen::VectorXd dydw0 =
+  //     nn.weights.at(1).transpose().cwiseProduct(foo) * input.transpose();
+
+  // Eigen::VectorXd dydw0 = HadamardProduct(l2_post_act_grad, nn.weights.at(2))
+  // *
+  //                         HadamardProduct(l1_post_act_grad, nn.weights.at(1))
+  //                         * l0_post_act_grad * input;
+}
+
 int main() {
   // Randomly generate a neural network
-  const int input_dimension = 2;
-  const int output_dimension = 1;
-  const int num_hidden_layers = 1;
-  const int nodes_per_hidden_layer = 3;
-  const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
+  // const int input_dimension = 2;
+  // const int output_dimension = 1;
+  // const int num_hidden_layers = 1;
+  // const int nodes_per_hidden_layer = 3;
+  // const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
 
   // NeuralNetworkParameters nn = GetRandomNeuralNetwork(
   //     input_dimension, output_dimension, num_hidden_layers,
@@ -269,12 +458,24 @@ int main() {
   // ComputeGradientLayerZeroWeightsLinear(nn, input);
   // ComputeGradientLayerOneWeightsLinear(nn, input);
 
+  // NeuralNetworkParameters nn = GetRandomNeuralNetwork(
+  //     input_dimension, output_dimension, num_hidden_layers,
+  //     nodes_per_hidden_layer, ActivationFunction::SIGMOID,
+  //     ActivationFunction::SIGMOID);
+  // ComputeGradientLayerZeroWeightsSigmoid(nn, input);
+  // ComputeGradientLayerOneWeightsSigmoid(nn, input);
+
+  const int input_dimension = 2;
+  const int output_dimension = 1;
+  const int num_hidden_layers = 2;
+  const int nodes_per_hidden_layer = 3;
+  const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
   NeuralNetworkParameters nn = GetRandomNeuralNetwork(
       input_dimension, output_dimension, num_hidden_layers,
       nodes_per_hidden_layer, ActivationFunction::SIGMOID,
       ActivationFunction::SIGMOID);
-  ComputeGradientLayerZeroWeightsSigmoid(nn, input);
-  ComputeGradientLayerOneWeightsSigmoid(nn, input);
+  ComputeGradientLayerZeroWeightsTwoLayerSigmoid(nn, input);
+  // ComputeGradientLayerOneWeightsSigmoid(nn, input);
 
   return 0;
 }

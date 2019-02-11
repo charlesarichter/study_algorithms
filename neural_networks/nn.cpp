@@ -61,7 +61,8 @@ NeuralNetworkParameters GetRandomNeuralNetwork(
 
 void EvaluateNetwork(const Eigen::VectorXd& input,
                      const NeuralNetworkParameters& params,
-                     Eigen::VectorXd* output) {
+                     Eigen::VectorXd* output,
+                     std::vector<Eigen::MatrixXd>* weight_gradients) {
   // std::cerr << "Input: " << current_value << std::endl;
 
   // Forward pass
@@ -70,26 +71,35 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
   std::vector<Eigen::VectorXd> post_activation_results;
   std::vector<Eigen::VectorXd> activation_gradients;
   for (int i = 0; i < params.weights.size(); ++i) {
-    // std::cerr << "i: " << i << std::endl;
-    // std::cerr << "Weight: " << weights_.at(i) << std::endl;
-    // std::cerr << "Bias: " << biases_.at(i) << std::endl;
+    // Compute pre-activation input.
     const Eigen::VectorXd pre_activation =
         params.weights.at(i) * current_value + params.biases.at(i);
     pre_activation_results.emplace_back(pre_activation);
 
-    // std::cerr << "Pre-activation: " << pre_activation << std::endl;
+    // Compute activation output.
     Eigen::VectorXd activation_gradient;
     current_value =
         Activation(pre_activation, params.activation_functions.at(i),
                    &activation_gradient);
     post_activation_results.emplace_back(current_value);
     activation_gradients.emplace_back(activation_gradient);
+
+    // std::cerr << "i: " << i << std::endl;
+    // std::cerr << "Weight: " << weights_.at(i) << std::endl;
+    // std::cerr << "Bias: " << biases_.at(i) << std::endl;
+    // std::cerr << "Pre-activation: " << pre_activation << std::endl;
     // std::cerr << "Post-activation: " << current_value << std::endl;
   }
   *output = current_value;
 
   // Backward pass (backprop)
-  // TODO
+
+  // dy/dA1 = f1'(layer_1_pre_act) * layer_0_post_act
+  // dy/dA0 = f1'(layer_1_pre_act) * A1 * f0'(layer_0_pre_act) * input
+
+  // dy/dA2 = f2'(layer_2_pre_act) * layer_1_post_act
+  // dy/dA1 = f2'(layer_2_pre_act) * A2 * f1'(layer_1_pre_act) * layer_0_post_act
+  // dy/dA0 = f2'(layer_2_pre_act) * A2 * f1'(layer_1_pre_act) * A1 * f0'(layer_0_pre_act) * input
 
   // // Manually compute it here to quickly verify
   // Eigen::MatrixXd dydA1 = post_activation_results.at(0).transpose();
@@ -140,12 +150,12 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
 
       // Slope of one.
       *activation_gradient = Eigen::VectorXd::Ones(input.size());
-      // *activation_gradient =
-      //     Eigen::MatrixXd::Identity(input.size(), input.size());
       break;
     }
     case ActivationFunction::SIGMOID: {
       *activation_gradient = Eigen::VectorXd::Zero(input.size());
+
+      // TODO: More efficient/vectorized computation.
       for (size_t i = 0; i < input.size(); ++i) {
         const double f = 1 / (1 + exp(-1 * input(i)));
         output(i) = f;
