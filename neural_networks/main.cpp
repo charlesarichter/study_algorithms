@@ -271,7 +271,7 @@ Eigen::MatrixXd HadamardProduct(const Eigen::MatrixXd& a,
 
 void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
     const NeuralNetworkParameters& nn, const Eigen::VectorXd& input) {
-  for (size_t layer = 0; layer < 3; ++layer) {
+  for (size_t layer = 0; layer < 4; ++layer) {
     const Eigen::MatrixXd& w0 = nn.weights.at(layer);
     // std::cerr << "Layer Zero Input: " << input.transpose() << std::endl;
     // std::cerr << "Layer Zero Weights 0: " << std::endl << w0 << std::endl;
@@ -324,10 +324,14 @@ void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
               << dydw0_numerical << std::endl;
   }
 
-  // dy/dA2 = f2'(layer_2_pre_act) * layer_1_post_act
-  // dy/dA1 = f2'(layer_2_pre_act) * A2
-  //         * f1'(layer_1_pre_act) * layer_0_post_act
-  // dy/dA0 = f2'(layer_2_pre_act) * A2
+  // dy/dA3 = f3'(layer_3_pre_act) * layer_2_post_act
+  // dy/dA2 = f3'(layer_3_pre_act) * A3
+  //        * f2'(layer_2_pre_act) * layer_1_post_act
+  // dy/dA1 = f3'(layer_3_pre_act) * A3
+  //        * f2'(layer_2_pre_act) * A2
+  //        * f1'(layer_1_pre_act) * layer_0_post_act
+  // dy/dA0 = f3'(layer_3_pre_act) * A3
+  //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * A1
   //        * f0'(layer_0_pre_act) * input
 
@@ -351,42 +355,47 @@ void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
   const Eigen::VectorXd l2_post_act =
       Activation(l2_pre_act, ActivationFunction::SIGMOID, &l2_post_act_grad);
 
-  // std::cerr << "l2 post act grad " << std::endl
-  //           << l2_post_act_grad << std::endl;
-  // std::cerr << "l1 post act " << std::endl << l1_post_act << std::endl;
+  const Eigen::VectorXd l3_pre_act =
+      nn.weights.at(3) * l2_post_act + nn.biases.at(3);
 
-  // l2_post_act_grad is 1x1, so we need to do a cwise product and expand/copy
-  // it so the dimension agrees with l1_post_act, which is 3x1 or 1x3.
+  Eigen::VectorXd l3_post_act_grad;
+  const Eigen::VectorXd l3_post_act =
+      Activation(l3_pre_act, ActivationFunction::SIGMOID, &l3_post_act_grad);
 
-  // Here, l2_post_act_grad is being multiplied by something that is 1x3 or 3x1
-  // Eigen::VectorXd l2_post_act_grad_repmat(3);
-  // l2_post_act_grad_repmat(0) = l2_post_act_grad(0);
-  // l2_post_act_grad_repmat(1) = l2_post_act_grad(0);
-  // l2_post_act_grad_repmat(2) = l2_post_act_grad(0);
+  // dy/dA3 = f3'(layer_2_pre_act) * layer_2_post_act
+  const Eigen::MatrixXd z = Eigen::MatrixXd::Ones(1, 1);
+  const Eigen::MatrixXd dydw3 =
+      z.cwiseProduct(l3_post_act_grad.transpose()).transpose() *
+      l2_post_act.transpose();
+  std::cerr << "dydw3 " << std::endl << dydw3 << std::endl;
 
-  // dy/dA2 = f2'(layer_2_pre_act) * layer_1_post_act
-  const Eigen::VectorXd dydw2 =
-      l2_post_act_grad.transpose() * l1_post_act.transpose();
+  // dy/dA2 = f3'(layer_3_pre_act) * A3
+  //         * f2'(layer_2_pre_act) * layer_1_post_act
+  const Eigen::MatrixXd a =
+      z.cwiseProduct(l3_post_act_grad.transpose()) * nn.weights.at(3);
+  const Eigen::MatrixXd dydw2 =
+      a.cwiseProduct(l2_post_act_grad.transpose()).transpose() *
+      l1_post_act.transpose();
   std::cerr << "dydw2 " << std::endl << dydw2 << std::endl;
 
-  // dy/dA1 = f2'(layer_2_pre_act) * A2
-  //         * f1'(layer_1_pre_act) * layer_0_post_act
+  // dy/dA1 = f3'(layer_3_pre_act) * A3
+  //        * f2'(layer_2_pre_act) * A2
+  //        * f1'(layer_1_pre_act) * layer_0_post_act
+  const Eigen::MatrixXd b =
+      a.cwiseProduct(l2_post_act_grad.transpose()) * nn.weights.at(2);
   const Eigen::MatrixXd dydw1 =
-      (l2_post_act_grad.transpose() * nn.weights.at(2))
-          .cwiseProduct(l1_post_act_grad.transpose())
-          .transpose() *
+      b.cwiseProduct(l1_post_act_grad.transpose()).transpose() *
       l0_post_act.transpose();
   std::cerr << "dydw1 " << std::endl << dydw1 << std::endl;
 
-  // dy/dA0 = f2'(layer_2_pre_act) * A2
+  // dy/dA0 = f3'(layer_3_pre_act) * A3
+  //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * A1
   //        * f0'(layer_0_pre_act) * input
+  const Eigen::MatrixXd c =
+      b.cwiseProduct(l1_post_act_grad.transpose()) * nn.weights.at(1);
   const Eigen::MatrixXd dydw0 =
-      ((l2_post_act_grad.transpose() * nn.weights.at(2))
-           .cwiseProduct(l1_post_act_grad.transpose()) *
-       nn.weights.at(1))
-          .cwiseProduct(l0_post_act_grad.transpose())
-          .transpose() *
+      c.cwiseProduct(l0_post_act_grad.transpose()).transpose() *
       input.transpose();
   std::cerr << "dydw0 " << std::endl << dydw0 << std::endl;
 }
@@ -415,7 +424,7 @@ int main() {
 
   const int input_dimension = 2;
   const int output_dimension = 1;
-  const int num_hidden_layers = 2;
+  const int num_hidden_layers = 3;
   const int nodes_per_hidden_layer = 3;
   const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
   NeuralNetworkParameters nn = GetRandomNeuralNetwork(
