@@ -266,15 +266,11 @@ void ComputeGradientLayerOneWeightsSigmoid(const NeuralNetworkParameters& nn,
             << dydw1_vectorized - dydw1_numerical << std::endl;
 }
 
-Eigen::MatrixXd HadamardProduct(const Eigen::MatrixXd& a,
-                                const Eigen::MatrixXd& b) {}
-
-void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
-    const NeuralNetworkParameters& nn, const Eigen::VectorXd& input) {
-  for (size_t layer = 0; layer < 4; ++layer) {
-    const Eigen::MatrixXd& w0 = nn.weights.at(layer);
-    // std::cerr << "Layer Zero Input: " << input.transpose() << std::endl;
-    // std::cerr << "Layer Zero Weights 0: " << std::endl << w0 << std::endl;
+void ComputeGradientTest(const NeuralNetworkParameters& nn,
+                         const Eigen::VectorXd& input) {
+  const size_t num_layers = nn.weights.size();
+  for (size_t layer = 0; layer < num_layers; ++layer) {
+    const Eigen::MatrixXd& w = nn.weights.at(layer);
 
     // Compute network output for the original network.
     Eigen::VectorXd output;
@@ -282,15 +278,12 @@ void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
     EvaluateNetwork(input, nn, &output, &weight_gradients);
 
     // Gradient matrix to be filled in.
-    // Eigen::MatrixXd dydw0 = Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
-    Eigen::MatrixXd dydw0_numerical =
-        Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
-    Eigen::MatrixXd dydw0_vectorized =
-        Eigen::MatrixXd::Zero(w0.rows(), w0.cols());
+    Eigen::MatrixXd dydw_numerical = Eigen::MatrixXd::Zero(w.rows(), w.cols());
+    Eigen::MatrixXd dydw_vectorized = Eigen::MatrixXd::Zero(w.rows(), w.cols());
 
     const double dw = 1e-3;
-    for (size_t i = 0; i < w0.rows(); ++i) {
-      for (size_t j = 0; j < w0.cols(); ++j) {
+    for (size_t i = 0; i < w.rows(); ++i) {
+      for (size_t j = 0; j < w.cols(); ++j) {
         // Perturb this particular element of the weight matrix.
         NeuralNetworkParameters nn_perturbation_plus = nn;
         nn_perturbation_plus.weights.at(layer)(i, j) += dw;
@@ -317,11 +310,11 @@ void ComputeGradientLayerZeroWeightsTwoLayerSigmoid(
             (output_perturbation_plus - output_perturbation_minus) / (2 * dw);
         assert(vector_grad.size() == 1);
         const double scalar_grad = vector_grad(0);
-        dydw0_numerical(i, j) = scalar_grad;
+        dydw_numerical(i, j) = scalar_grad;
       }
     }
     std::cerr << "derivative of layer " << layer << " weights:" << std::endl
-              << dydw0_numerical << std::endl;
+              << dydw_numerical << std::endl;
   }
 
   // dy/dA3 = f3'(layer_3_pre_act) * layer_2_post_act
@@ -431,8 +424,7 @@ int main() {
       input_dimension, output_dimension, num_hidden_layers,
       nodes_per_hidden_layer, ActivationFunction::SIGMOID,
       ActivationFunction::SIGMOID);
-  ComputeGradientLayerZeroWeightsTwoLayerSigmoid(nn, input);
-  // ComputeGradientLayerOneWeightsSigmoid(nn, input);
+  ComputeGradientTest(nn, input);
 
   return 0;
 }
