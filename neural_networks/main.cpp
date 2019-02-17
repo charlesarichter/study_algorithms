@@ -11,11 +11,11 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
     // Compute network output for the original network.
     Eigen::VectorXd output;
     std::vector<Eigen::MatrixXd> weight_gradients;
-    EvaluateNetwork(input, nn, &output, &weight_gradients);
+    std::vector<Eigen::VectorXd> bias_gradients;
+    EvaluateNetwork(input, nn, &output, &weight_gradients, &bias_gradients);
 
     // Gradient matrix to be filled in.
     Eigen::MatrixXd dydw_numerical = Eigen::MatrixXd::Zero(w.rows(), w.cols());
-    Eigen::MatrixXd dydw_vectorized = Eigen::MatrixXd::Zero(w.rows(), w.cols());
 
     const double dw = 1e-3;
     for (size_t i = 0; i < w.rows(); ++i) {
@@ -27,8 +27,10 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
         // Compute network output for the perturbed network.
         Eigen::VectorXd output_perturbation_plus;
         std::vector<Eigen::MatrixXd> weight_gradients_perturbation_plus;
+        std::vector<Eigen::VectorXd> bias_gradients_perturbation_plus;
         EvaluateNetwork(input, nn_perturbation_plus, &output_perturbation_plus,
-                        &weight_gradients_perturbation_plus);
+                        &weight_gradients_perturbation_plus,
+                        &bias_gradients_perturbation_plus);
 
         // Perturb this particular element of the weight matrix.
         NeuralNetworkParameters nn_perturbation_minus = nn;
@@ -37,9 +39,11 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
         // Compute network output for the perturbed network.
         Eigen::VectorXd output_perturbation_minus;
         std::vector<Eigen::MatrixXd> weight_gradients_perturbation_minus;
+        std::vector<Eigen::VectorXd> bias_gradients_perturbation_minus;
         EvaluateNetwork(input, nn_perturbation_minus,
                         &output_perturbation_minus,
-                        &weight_gradients_perturbation_minus);
+                        &weight_gradients_perturbation_minus,
+                        &bias_gradients_perturbation_minus);
 
         // Compute scalar value of numerical gradient.
         const Eigen::VectorXd vector_grad =

@@ -20,7 +20,8 @@ NeuralNetworkParameters GetRandomNeuralNetwork(
 void EvaluateNetwork(const Eigen::VectorXd& input,
                      const NeuralNetworkParameters& params,
                      Eigen::VectorXd* output,
-                     std::vector<Eigen::MatrixXd>* weight_gradients);
+                     std::vector<Eigen::MatrixXd>* weight_gradients,
+                     std::vector<Eigen::VectorXd>* bias_gradients);
 
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
