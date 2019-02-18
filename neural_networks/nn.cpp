@@ -64,8 +64,6 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
                      Eigen::VectorXd* output,
                      std::vector<Eigen::MatrixXd>* weight_gradients,
                      std::vector<Eigen::VectorXd>* bias_gradients) {
-  // std::cerr << "Input: " << current_value << std::endl;
-
   // Forward pass
   Eigen::VectorXd current_value = input;
   std::vector<Eigen::VectorXd> pre_activation_results;
@@ -84,61 +82,41 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
                    &activation_gradient);
     post_activation_results.emplace_back(current_value);
     activation_gradients.emplace_back(activation_gradient);
-
-    // std::cerr << "i: " << i << std::endl;
-    // std::cerr << "Weight: " << weights_.at(i) << std::endl;
-    // std::cerr << "Bias: " << biases_.at(i) << std::endl;
-    // std::cerr << "Pre-activation: " << pre_activation << std::endl;
-    // std::cerr << "Post-activation: " << current_value << std::endl;
   }
   *output = current_value;
 
-  // Backward pass (backprop)
+  // Backward pass
 
-  // dy/dA1 = f1'(layer_1_pre_act) * layer_0_post_act
-  // dy/dA0 = f1'(layer_1_pre_act) * A1 * f0'(layer_0_pre_act) * input
+  // TODO: Dimensionality of the output? Determine the dimensionality from the
+  // network structure. Don't hardcode it.
+  Eigen::MatrixXd a = Eigen::MatrixXd::Ones(1, 1);
 
-  // dy/dA2 = f2'(layer_2_pre_act) * layer_1_post_act
-  // dy/dA1 = f2'(layer_2_pre_act) * A2 * f1'(layer_1_pre_act) * layer_0_post_act
-  // dy/dA0 = f2'(layer_2_pre_act) * A2 * f1'(layer_1_pre_act) * A1 * f0'(layer_0_pre_act) * input
+  // Allocate output.
+  weight_gradients->resize(params.weights.size());
+  bias_gradients->resize(params.weights.size());
 
-  // // Manually compute it here to quickly verify
-  // Eigen::MatrixXd dydA1 = post_activation_results.at(0).transpose();
-  // // Eigen::MatrixXd dydb1 = Eigen::MatrixXd::Identity(
-  // Eigen::MatrixXd dydA0 = params.weights.at(1).transpose() * input;
-  // std::cerr << "Gradient dydA1..." << dydA1 << std::endl;
-  // std::cerr << "Gradient dydA0..." << dydA0.transpose() << std::endl;
+  for (int i = (params.weights.size() - 1); i > 0; --i) {
+    const Eigen::MatrixXd b =
+        a.cwiseProduct(activation_gradients.at(i).transpose()).transpose();
+    const Eigen::MatrixXd dydw =
+        b * post_activation_results.at(i - 1).transpose();
+    weight_gradients->at(i) = dydw;
+    bias_gradients->at(i) = b;
 
-  // Attempt at implementing backprop.
-  //
-  // Copied from comments above:
-  // Written differently, where x1 = f0(A0*x0 + b0),
-  // dy/dA1 = f1'(A1*x1 + b1) * x1
-  // dy/db1 = f1'(A1*x1 + b1)
-  // dy/dA0 = f1'(A1*x1 + b1) * A1 * f0'(A0*x0 + b0) * x0
-  // dy/db0 = f1'(A1*x1 + b1) * A1 * f0'(A0*x0 + b0)
+    // TODO: Can we condense these into one line?
+    const Eigen::MatrixXd tmp =
+        a.cwiseProduct(activation_gradients.at(i).transpose()) *
+        params.weights.at(i);
+    a = tmp;
+  }
 
-  // Eigen::MatrixXd dydA1_test =
-  //     activation_gradients.at(1) * post_activation_results.at(0).transpose();
-  // std::cerr << "Gradient dydA1_test..." << dydA1_test << std::endl;
-
-  // Eigen::MatrixXd dydA0_test = activation_gradients.at(1) *
-  //                              params.weights.at(1) *
-  //                              activation_gradients.at(0) * input;
-
-  // 2 x 3 or 3 x 2: activation_gradients.at(0) * input.transpose();
-  // 3 x 1 or 1 x 3: params.weights.at(1);
-  //
-  // Eigen::MatrixXd dydA0_test =
-  //     activation_gradients.at(1) *
-  //     (params.weights.at(1) * (activation_gradients.at(0) *
-  //     input.transpose()));
-  // std::cerr << "Gradient dydA0_test..." << dydA0_test << std::endl;
-
-  // std::cerr << "1: " << activation_gradients.at(1) << std::endl;
-  // std::cerr << "2: " << params.weights.at(1) << std::endl;
-  // std::cerr << "3: " << activation_gradients.at(0) << std::endl;
-  // std::cerr << "4: " << input << std::endl;
+  // TODO: The initial layer uses the input. See if we can somehow include this
+  // in the loop above rather than having a separate line here.
+  const Eigen::MatrixXd dydb0 =
+      a.cwiseProduct(activation_gradients.at(0).transpose()).transpose();
+  const Eigen::MatrixXd dydw0 = dydb0 * input.transpose();
+  weight_gradients->at(0) = dydw0;
+  bias_gradients->at(0) = dydb0;
 }
 
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,

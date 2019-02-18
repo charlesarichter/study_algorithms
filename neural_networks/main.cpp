@@ -4,6 +4,12 @@
 
 void ComputeGradientTest(const NeuralNetworkParameters& nn,
                          const Eigen::VectorXd& input) {
+  Eigen::VectorXd backprop_output;
+  std::vector<Eigen::MatrixXd> backprop_weight_gradients;
+  std::vector<Eigen::VectorXd> backprop_bias_gradients;
+  EvaluateNetwork(input, nn, &backprop_output, &backprop_weight_gradients,
+                  &backprop_bias_gradients);
+
   const size_t num_layers = nn.weights.size();
   for (size_t layer = 0; layer < num_layers; ++layer) {
     const Eigen::MatrixXd& w = nn.weights.at(layer);
@@ -133,39 +139,39 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
       Activation(l3_pre_act, ActivationFunction::SIGMOID, &l3_post_act_grad);
 
   // dy/dA3 = f3'(layer_2_pre_act) * layer_2_post_act
-  const Eigen::MatrixXd z = Eigen::MatrixXd::Ones(1, 1);
+  const Eigen::MatrixXd a = Eigen::MatrixXd::Ones(1, 1);
   const Eigen::MatrixXd dydw3 =
-      z.cwiseProduct(l3_post_act_grad.transpose()).transpose() *
+      a.cwiseProduct(l3_post_act_grad.transpose()).transpose() *
       l2_post_act.transpose();
   std::cerr << "dydw3 " << std::endl << dydw3 << std::endl;
 
   // dy/db3 = f3'(layer_2_pre_act)
   const Eigen::VectorXd dydb3 =
-      z.cwiseProduct(l3_post_act_grad.transpose()).transpose();
+      a.cwiseProduct(l3_post_act_grad.transpose()).transpose();
   std::cerr << "dydb3 " << std::endl << dydb3 << std::endl;
 
   // dy/dA2 = f3'(layer_3_pre_act) * A3
   //         * f2'(layer_2_pre_act) * layer_1_post_act
-  const Eigen::MatrixXd a =
-      z.cwiseProduct(l3_post_act_grad.transpose()) * nn.weights.at(3);
+  const Eigen::MatrixXd b =
+      a.cwiseProduct(l3_post_act_grad.transpose()) * nn.weights.at(3);
   const Eigen::MatrixXd dydw2 =
-      a.cwiseProduct(l2_post_act_grad.transpose()).transpose() *
+      b.cwiseProduct(l2_post_act_grad.transpose()).transpose() *
       l1_post_act.transpose();
   std::cerr << "dydw2 " << std::endl << dydw2 << std::endl;
 
   // dy/db2 = f3'(layer_3_pre_act) * A3
   //         * f2'(layer_2_pre_act)
   const Eigen::VectorXd dydb2 =
-      a.cwiseProduct(l2_post_act_grad.transpose()).transpose();
+      b.cwiseProduct(l2_post_act_grad.transpose()).transpose();
   std::cerr << "dydb2 " << std::endl << dydb2 << std::endl;
 
   // dy/dA1 = f3'(layer_3_pre_act) * A3
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * layer_0_post_act
-  const Eigen::MatrixXd b =
-      a.cwiseProduct(l2_post_act_grad.transpose()) * nn.weights.at(2);
+  const Eigen::MatrixXd c =
+      b.cwiseProduct(l2_post_act_grad.transpose()) * nn.weights.at(2);
   const Eigen::MatrixXd dydw1 =
-      b.cwiseProduct(l1_post_act_grad.transpose()).transpose() *
+      c.cwiseProduct(l1_post_act_grad.transpose()).transpose() *
       l0_post_act.transpose();
   std::cerr << "dydw1 " << std::endl << dydw1 << std::endl;
 
@@ -173,17 +179,17 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act)
   const Eigen::MatrixXd dydb1 =
-      b.cwiseProduct(l1_post_act_grad.transpose()).transpose();
+      c.cwiseProduct(l1_post_act_grad.transpose()).transpose();
   std::cerr << "dydb1 " << std::endl << dydb1 << std::endl;
 
   // dy/dA0 = f3'(layer_3_pre_act) * A3
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * A1
   //        * f0'(layer_0_pre_act) * input
-  const Eigen::MatrixXd c =
-      b.cwiseProduct(l1_post_act_grad.transpose()) * nn.weights.at(1);
+  const Eigen::MatrixXd d =
+      c.cwiseProduct(l1_post_act_grad.transpose()) * nn.weights.at(1);
   const Eigen::MatrixXd dydw0 =
-      c.cwiseProduct(l0_post_act_grad.transpose()).transpose() *
+      d.cwiseProduct(l0_post_act_grad.transpose()).transpose() *
       input.transpose();
   std::cerr << "dydw0 " << std::endl << dydw0 << std::endl;
 
@@ -192,8 +198,18 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
   //        * f1'(layer_1_pre_act) * A1
   //        * f0'(layer_0_pre_act)
   const Eigen::MatrixXd dydb0 =
-      c.cwiseProduct(l0_post_act_grad.transpose()).transpose();
+      d.cwiseProduct(l0_post_act_grad.transpose()).transpose();
   std::cerr << "dydb0 " << std::endl << dydb0 << std::endl;
+
+  // Display gradients computed by backprop.
+  for (int i = 0; i < backprop_weight_gradients.size(); ++i) {
+    std::cerr << "dydw_backprop for layer " << i << std::endl
+              << backprop_weight_gradients.at(i) << std::endl;
+  }
+  for (int i = 0; i < backprop_bias_gradients.size(); ++i) {
+    std::cerr << "dydb_backprop for layer " << i << std::endl
+              << backprop_bias_gradients.at(i) << std::endl;
+  }
 }
 
 int main() {
