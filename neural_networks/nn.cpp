@@ -29,8 +29,6 @@ NeuralNetworkParameters GetRandomNeuralNetwork(
   return nn;
 }
 
-// NeuralNetwork::~NeuralNetwork() {}
-
 // Example derivation of gradients:
 //
 // Consider a single hidden layer
