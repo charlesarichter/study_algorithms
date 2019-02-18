@@ -16,9 +16,44 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
 
     // Gradient matrix to be filled in.
     Eigen::MatrixXd dydw_numerical = Eigen::MatrixXd::Zero(w.rows(), w.cols());
-
+    Eigen::VectorXd dydb_numerical = Eigen::VectorXd::Zero(w.rows());
     const double dw = 1e-3;
+
     for (size_t i = 0; i < w.rows(); ++i) {
+      // Perturb this particular element of the bias vector.
+      NeuralNetworkParameters nn_perturbation_bias_plus = nn;
+      nn_perturbation_bias_plus.biases.at(layer)(i) += dw;
+
+      // Compute network output for the perturbed network.
+      Eigen::VectorXd output_perturbation_bias_plus;
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation_bias_plus;
+      std::vector<Eigen::VectorXd> bias_gradients_perturbation_bias_plus;
+      EvaluateNetwork(input, nn_perturbation_bias_plus,
+                      &output_perturbation_bias_plus,
+                      &weight_gradients_perturbation_bias_plus,
+                      &bias_gradients_perturbation_bias_plus);
+
+      // Perturb this particular element of the bias vector.
+      NeuralNetworkParameters nn_perturbation_bias_minus = nn;
+      nn_perturbation_bias_minus.biases.at(layer)(i) -= dw;
+
+      // Compute network output for the perturbed network.
+      Eigen::VectorXd output_perturbation_bias_minus;
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation_bias_minus;
+      std::vector<Eigen::VectorXd> bias_gradients_perturbation_bias_minus;
+      EvaluateNetwork(input, nn_perturbation_bias_minus,
+                      &output_perturbation_bias_minus,
+                      &weight_gradients_perturbation_bias_minus,
+                      &bias_gradients_perturbation_bias_minus);
+
+      // Compute scalar value of numerical gradient.
+      const Eigen::VectorXd bias_vector_grad =
+          (output_perturbation_bias_plus - output_perturbation_bias_minus) /
+          (2 * dw);
+      assert(bias_vector_grad.size() == 1);
+      const double bias_scalar_grad = bias_vector_grad(0);
+      dydb_numerical(i) = bias_scalar_grad;
+
       for (size_t j = 0; j < w.cols(); ++j) {
         // Perturb this particular element of the weight matrix.
         NeuralNetworkParameters nn_perturbation_plus = nn;
@@ -55,6 +90,8 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
     }
     std::cerr << "derivative of layer " << layer << " weights:" << std::endl
               << dydw_numerical << std::endl;
+    std::cerr << "derivative of layer " << layer << " biases:" << std::endl
+              << dydb_numerical << std::endl;
   }
 
   // dy/dA3 = f3'(layer_3_pre_act) * layer_2_post_act
@@ -102,6 +139,11 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
       l2_post_act.transpose();
   std::cerr << "dydw3 " << std::endl << dydw3 << std::endl;
 
+  // dy/db3 = f3'(layer_2_pre_act)
+  const Eigen::VectorXd dydb3 =
+      z.cwiseProduct(l3_post_act_grad.transpose()).transpose();
+  std::cerr << "dydb3 " << std::endl << dydb3 << std::endl;
+
   // dy/dA2 = f3'(layer_3_pre_act) * A3
   //         * f2'(layer_2_pre_act) * layer_1_post_act
   const Eigen::MatrixXd a =
@@ -110,6 +152,12 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
       a.cwiseProduct(l2_post_act_grad.transpose()).transpose() *
       l1_post_act.transpose();
   std::cerr << "dydw2 " << std::endl << dydw2 << std::endl;
+
+  // dy/db2 = f3'(layer_3_pre_act) * A3
+  //         * f2'(layer_2_pre_act)
+  const Eigen::VectorXd dydb2 =
+      a.cwiseProduct(l2_post_act_grad.transpose()).transpose();
+  std::cerr << "dydb2 " << std::endl << dydb2 << std::endl;
 
   // dy/dA1 = f3'(layer_3_pre_act) * A3
   //        * f2'(layer_2_pre_act) * A2
@@ -121,6 +169,13 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
       l0_post_act.transpose();
   std::cerr << "dydw1 " << std::endl << dydw1 << std::endl;
 
+  // dy/db1 = f3'(layer_3_pre_act) * A3
+  //        * f2'(layer_2_pre_act) * A2
+  //        * f1'(layer_1_pre_act)
+  const Eigen::MatrixXd dydb1 =
+      b.cwiseProduct(l1_post_act_grad.transpose()).transpose();
+  std::cerr << "dydb1 " << std::endl << dydb1 << std::endl;
+
   // dy/dA0 = f3'(layer_3_pre_act) * A3
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * A1
@@ -131,6 +186,14 @@ void ComputeGradientTest(const NeuralNetworkParameters& nn,
       c.cwiseProduct(l0_post_act_grad.transpose()).transpose() *
       input.transpose();
   std::cerr << "dydw0 " << std::endl << dydw0 << std::endl;
+
+  // dy/db0 = f3'(layer_3_pre_act) * A3
+  //        * f2'(layer_2_pre_act) * A2
+  //        * f1'(layer_1_pre_act) * A1
+  //        * f0'(layer_0_pre_act)
+  const Eigen::MatrixXd dydb0 =
+      c.cwiseProduct(l0_post_act_grad.transpose()).transpose();
+  std::cerr << "dydb0 " << std::endl << dydb0 << std::endl;
 }
 
 int main() {
