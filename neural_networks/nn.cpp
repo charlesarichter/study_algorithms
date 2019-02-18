@@ -66,14 +66,13 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
                      std::vector<Eigen::VectorXd>* bias_gradients) {
   // Forward pass
   Eigen::VectorXd current_value = input;
-  std::vector<Eigen::VectorXd> pre_activation_results;
-  std::vector<Eigen::VectorXd> post_activation_results;
   std::vector<Eigen::VectorXd> activation_gradients;
+  std::vector<Eigen::VectorXd> post_activation_results;
+  post_activation_results.emplace_back(input);
   for (int i = 0; i < params.weights.size(); ++i) {
     // Compute pre-activation input.
     const Eigen::VectorXd pre_activation =
         params.weights.at(i) * current_value + params.biases.at(i);
-    pre_activation_results.emplace_back(pre_activation);
 
     // Compute activation output.
     Eigen::VectorXd activation_gradient;
@@ -95,28 +94,17 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
   weight_gradients->resize(params.weights.size());
   bias_gradients->resize(params.weights.size());
 
-  for (int i = (params.weights.size() - 1); i > 0; --i) {
-    const Eigen::MatrixXd b =
+  for (int i = (params.weights.size() - 1); i >= 0; --i) {
+    const Eigen::MatrixXd dydb =
         a.cwiseProduct(activation_gradients.at(i).transpose()).transpose();
     const Eigen::MatrixXd dydw =
-        b * post_activation_results.at(i - 1).transpose();
-    weight_gradients->at(i) = dydw;
-    bias_gradients->at(i) = b;
-
-    // TODO: Can we condense these into one line?
-    const Eigen::MatrixXd tmp =
-        a.cwiseProduct(activation_gradients.at(i).transpose()) *
+        dydb * post_activation_results.at(i).transpose();
+    a = a.cwiseProduct(activation_gradients.at(i).transpose()) *
         params.weights.at(i);
-    a = tmp;
-  }
 
-  // TODO: The initial layer uses the input. See if we can somehow include this
-  // in the loop above rather than having a separate line here.
-  const Eigen::MatrixXd dydb0 =
-      a.cwiseProduct(activation_gradients.at(0).transpose()).transpose();
-  const Eigen::MatrixXd dydw0 = dydb0 * input.transpose();
-  weight_gradients->at(0) = dydw0;
-  bias_gradients->at(0) = dydb0;
+    weight_gradients->at(i) = dydw;
+    bias_gradients->at(i) = dydb;
+  }
 }
 
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
