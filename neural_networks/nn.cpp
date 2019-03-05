@@ -105,6 +105,28 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
   }
 }
 
+void EvaluateNetworkLoss(const Eigen::VectorXd& input,
+                         const NeuralNetworkParameters& params,
+                         const Eigen::VectorXd& label,
+                         const LossFunction& loss_function,
+                         Eigen::VectorXd* loss,
+                         std::vector<Eigen::MatrixXd>* weight_gradients,
+                         std::vector<Eigen::VectorXd>* bias_gradients) {
+  // Compute output and gradients of the network itself.
+  Eigen::VectorXd network_output;
+  std::vector<Eigen::MatrixXd> network_weight_gradients;
+  std::vector<Eigen::VectorXd> network_bias_gradients;
+  EvaluateNetwork(input, params, &network_output, &network_weight_gradients,
+                  &network_bias_gradients);
+
+  // Compute the loss.
+  Eigen::VectorXd loss_gradient;
+  *loss = Loss(network_output, label, loss_function, &loss_gradient);
+
+  // TODO: Compute gradients of loss w.r.t. network params. For now, leave
+  // weight_gradients and bias_gradients unpopulated.
+}
+
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
                            Eigen::VectorXd* activation_gradient) {
@@ -138,4 +160,27 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
     }
   }
   return output;
+}
+
+Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,
+                     const LossFunction loss_function,
+                     Eigen::VectorXd* loss_gradient) {
+  switch (loss_function) {
+    case LossFunction::CROSS_ENTROPY: {
+      // TODO: Make this N-dimensional.
+      const double label_1d = label(0);
+      const double p_predicted_1d = input(0);
+      const double loss_1d = -1 * (label_1d * log(p_predicted_1d) +
+                                   (1 - label_1d) * log(1 - p_predicted_1d));
+      const Eigen::VectorXd loss = loss_1d * Eigen::VectorXd::Ones(1);
+
+      // TODO: Compute gradients.
+      return loss;
+      break;
+    }
+    default: {
+      throw std::runtime_error("Unsupported loss function");
+      break;
+    }
+  }
 }

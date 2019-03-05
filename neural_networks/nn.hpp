@@ -4,6 +4,8 @@
 // NOTE: See https://en.wikipedia.org/wiki/activation_function
 enum class ActivationFunction { LINEAR, SIGMOID, RELU };
 
+enum class LossFunction { SQUARED_ERROR, CROSS_ENTROPY };
+
 struct NeuralNetworkParameters {
   std::vector<Eigen::MatrixXd> weights;
   std::vector<Eigen::VectorXd> biases;
@@ -21,6 +23,18 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
                      std::vector<Eigen::MatrixXd>* weight_gradients,
                      std::vector<Eigen::VectorXd>* bias_gradients);
 
+void EvaluateNetworkLoss(const Eigen::VectorXd& input,
+                         const NeuralNetworkParameters& params,
+                         const Eigen::VectorXd& label,
+                         const LossFunction& loss_function,
+                         Eigen::VectorXd* loss,
+                         std::vector<Eigen::MatrixXd>* weight_gradients,
+                         std::vector<Eigen::VectorXd>* bias_gradients);
+
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
                            Eigen::VectorXd* activation_gradient);
+
+Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,
+                     const LossFunction loss_function,
+                     Eigen::VectorXd* loss_gradient);

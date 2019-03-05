@@ -2,7 +2,7 @@
 
 #include "nn.hpp"
 
-void ComputeGradientsNumerically(
+void ComputeNetworkGradientsNumerically(
     const Eigen::VectorXd& input, const NeuralNetworkParameters& nn,
     std::vector<Eigen::MatrixXd>* numerical_weight_gradients,
     std::vector<Eigen::VectorXd>* numerical_bias_gradients) {
@@ -100,6 +100,110 @@ void ComputeGradientsNumerically(
     // Store the computed gradients.
     numerical_weight_gradients->emplace_back(dydw_numerical);
     numerical_bias_gradients->emplace_back(dydb_numerical);
+  }
+}
+
+void ComputeLossGradientsNumerically(
+    const Eigen::VectorXd& input, const NeuralNetworkParameters& nn,
+    const Eigen::VectorXd& label, const LossFunction& loss_function,
+    std::vector<Eigen::MatrixXd>* numerical_weight_gradients,
+    std::vector<Eigen::VectorXd>* numerical_bias_gradients) {
+  const size_t num_layers = nn.weights.size();
+  const double delta = 1e-6;
+  for (size_t layer = 0; layer < num_layers; ++layer) {
+    const Eigen::MatrixXd& w = nn.weights.at(layer);
+
+    // Compute network output for the original network.
+    Eigen::VectorXd output;
+    std::vector<Eigen::MatrixXd> weight_gradients;
+    std::vector<Eigen::VectorXd> bias_gradients;
+    EvaluateNetworkLoss(input, nn, label, loss_function, &output,
+                        &weight_gradients, &bias_gradients);
+
+    // Gradient matrix to be filled in.
+    Eigen::MatrixXd dldw_numerical = Eigen::MatrixXd::Zero(w.rows(), w.cols());
+    Eigen::VectorXd dldb_numerical = Eigen::VectorXd::Zero(w.rows());
+
+    for (size_t i = 0; i < w.rows(); ++i) {
+      // Perturb this particular element of the bias vector.
+      NeuralNetworkParameters nn_perturbation_bias_plus = nn;
+      nn_perturbation_bias_plus.biases.at(layer)(i) += delta;
+
+      // Compute network output for the perturbed network.
+      Eigen::VectorXd output_perturbation_bias_plus;
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation_bias_plus;
+      std::vector<Eigen::VectorXd> bias_gradients_perturbation_bias_plus;
+      EvaluateNetworkLoss(input, nn_perturbation_bias_plus, label,
+                          loss_function, &output_perturbation_bias_plus,
+                          &weight_gradients_perturbation_bias_plus,
+                          &bias_gradients_perturbation_bias_plus);
+
+      // Perturb this particular element of the bias vector.
+      NeuralNetworkParameters nn_perturbation_bias_minus = nn;
+      nn_perturbation_bias_minus.biases.at(layer)(i) -= delta;
+
+      // Compute network output for the perturbed network.
+      Eigen::VectorXd output_perturbation_bias_minus;
+      std::vector<Eigen::MatrixXd> weight_gradients_perturbation_bias_minus;
+      std::vector<Eigen::VectorXd> bias_gradients_perturbation_bias_minus;
+      EvaluateNetworkLoss(input, nn_perturbation_bias_minus, label,
+                          loss_function, &output_perturbation_bias_minus,
+                          &weight_gradients_perturbation_bias_minus,
+                          &bias_gradients_perturbation_bias_minus);
+
+      // Compute scalar value of numerical gradient.
+      const Eigen::VectorXd bias_vector_grad =
+          (output_perturbation_bias_plus - output_perturbation_bias_minus) /
+          (2 * delta);
+      assert(bias_vector_grad.size() == 1);
+      const double bias_scalar_grad = bias_vector_grad(0);
+      dldb_numerical(i) = bias_scalar_grad;
+
+      for (size_t j = 0; j < w.cols(); ++j) {
+        // Perturb this particular element of the weight matrix.
+        NeuralNetworkParameters nn_perturbation_plus = nn;
+        nn_perturbation_plus.weights.at(layer)(i, j) += delta;
+
+        // Compute network output for the perturbed network.
+        Eigen::VectorXd output_perturbation_plus;
+        std::vector<Eigen::MatrixXd> weight_gradients_perturbation_plus;
+        std::vector<Eigen::VectorXd> bias_gradients_perturbation_plus;
+        EvaluateNetworkLoss(input, nn_perturbation_plus, label, loss_function,
+                            &output_perturbation_plus,
+                            &weight_gradients_perturbation_plus,
+                            &bias_gradients_perturbation_plus);
+
+        // Perturb this particular element of the weight matrix.
+        NeuralNetworkParameters nn_perturbation_minus = nn;
+        nn_perturbation_minus.weights.at(layer)(i, j) -= delta;
+
+        // Compute network output for the perturbed network.
+        Eigen::VectorXd output_perturbation_minus;
+        std::vector<Eigen::MatrixXd> weight_gradients_perturbation_minus;
+        std::vector<Eigen::VectorXd> bias_gradients_perturbation_minus;
+        EvaluateNetworkLoss(input, nn_perturbation_minus, label, loss_function,
+                            &output_perturbation_minus,
+                            &weight_gradients_perturbation_minus,
+                            &bias_gradients_perturbation_minus);
+
+        // Compute scalar value of numerical gradient.
+        const Eigen::VectorXd vector_grad =
+            (output_perturbation_plus - output_perturbation_minus) /
+            (2 * delta);
+        assert(vector_grad.size() == 1);
+        const double scalar_grad = vector_grad(0);
+        dldw_numerical(i, j) = scalar_grad;
+      }
+    }
+
+    // std::cerr << "derivative of layer " << layer << " weights:" << std::endl
+    //           << dldw_numerical << std::endl;
+    // std::cerr << "derivative of layer " << layer << " biases:" << std::endl
+    //           << dldb_numerical << std::endl;
+
+    // Store the computed gradients.
+    numerical_weight_gradients->emplace_back(dldw_numerical);
+    numerical_bias_gradients->emplace_back(dldb_numerical);
   }
 }
 
@@ -236,8 +340,8 @@ void ComputeGradientsTest(const NeuralNetworkParameters& nn,
                   &backprop_bias_gradients);
 
   // Manual.
-  ComputeGradientsNumerically(input, nn, &numerical_weight_gradients,
-                              &numerical_bias_gradients);
+  ComputeNetworkGradientsNumerically(input, nn, &numerical_weight_gradients,
+                                     &numerical_bias_gradients);
 
   // Compare gradients.
   for (int i = 0; i < backprop_weight_gradients.size(); ++i) {
@@ -282,6 +386,84 @@ void ComputeGradientsTest(const NeuralNetworkParameters& nn,
   }
 }
 
+void ComputeLoss(const NeuralNetworkParameters& nn,
+                 const Eigen::VectorXd& input, const Eigen::VectorXd& label) {
+  Eigen::VectorXd net_output;
+  std::vector<Eigen::MatrixXd> net_weight_gradients;
+  std::vector<Eigen::VectorXd> net_bias_gradients;
+  EvaluateNetwork(input, nn, &net_output, &net_weight_gradients,
+                  &net_bias_gradients);
+
+  // Just confirm we're getting a single output element.
+  assert(net_output.size() == 1);
+
+  // Hardcode the number of datapoints in this "batch" to be 1.
+  const int num_data = 1;  // We would average over this many.
+
+  // Cross Entropy / Log Loss function for a single data point.
+  const double p_predicted = net_output(0);
+  const double p_label = label(0);
+  const double loss =
+      -1 * (p_label * log(p_predicted) + (1 - p_label) * log(1 - p_predicted));
+
+  std::cerr << "Label: " << p_label << ", Prediction: " << p_predicted
+            << ", Loss: " << loss << std::endl;
+
+  // Want: dloss/dweights
+  // Have: dloss/dppredicted, dppredicted/weights
+  // dloss/dweights = dloss/dpredicted * dpredicted/dweights
+
+  // "log" = natural logarithm, i.e. "ln". Does not hold for other bases.
+  // Using the fact that d/dx(log(x)) = 1/x:
+
+  // loss = -p_label * log(p_predicted) - (1 - p_label) * log(1 - p_predicted)
+  // dloss/dpredicted = -p_label * d/dpredicted(log(p_predicted))
+  //                    + (p_label - 1) * d/dpredicted(log(1 - p_predicted))
+  //                  = -p_label * (1/p_predicted)
+  //                    + (p_label - 1) * -1 * 1/(1 - p_predicted)
+
+  const double dloss_dpredicted =
+      -p_label * (1 / p_predicted) - (p_label - 1) / (1 - p_predicted);
+
+  // Compute gradients of loss w.r.t. weights numerically to compare.
+  std::vector<Eigen::MatrixXd> loss_weight_gradients;
+  std::vector<Eigen::VectorXd> loss_bias_gradients;
+  ComputeLossGradientsNumerically(input, nn, label, LossFunction::CROSS_ENTROPY,
+                                  &loss_weight_gradients, &loss_bias_gradients);
+
+  // Start off with the last row of weights.
+  for (size_t i = 0; i < 3; ++i) {
+    const Eigen::MatrixXd analytical_weight_gradient =
+        net_weight_gradients.at(i) * dloss_dpredicted;
+    const Eigen::MatrixXd analytical_bias_gradient =
+        net_bias_gradients.at(i) * dloss_dpredicted;
+    // std::cerr << "Analytical gradient of layer " << i
+    //           << " weights: " << std::endl
+    //           << analytical_gradient << std::endl;
+    // std::cerr << "Numerical gradient of layer " << i
+    //           << " weights: " << std::endl
+    //           << loss_weight_gradients.at(i) << std::endl;
+    std::cerr << "Layer "
+              << " (numerical - analytical) weight gradient difference: "
+              << std::endl
+              << analytical_weight_gradient - loss_weight_gradients.at(i)
+              << std::endl;
+    std::cerr << "Layer "
+              << " (numerical - analytical) bias gradient difference: "
+              << std::endl
+              << analytical_bias_gradient - loss_bias_gradients.at(i)
+              << std::endl;
+  }
+}
+
+// f(input; weights & biases) = output
+// cost(intput ; weights & biases) = ||output - label|| = (1/2)*(output -
+// label)^2. dcostdw = dcostdoutput * doutputdw
+//         = 2(output - label)*doutputdw
+//
+// Cross-entropy loss for classification/binary labels.
+//
+
 int main() {
   const int input_dimension = 2;
   const int output_dimension = 1;
@@ -292,6 +474,12 @@ int main() {
       input_dimension, output_dimension, num_hidden_layers,
       nodes_per_hidden_layer, ActivationFunction::SIGMOID,
       ActivationFunction::SIGMOID);
+
   ComputeGradientsTest(nn, input);
+
+  // Label for a single test datapoint.
+  const Eigen::VectorXd label = Eigen::VectorXd::Ones(output_dimension);
+  ComputeLoss(nn, input, label);
+
   return 0;
 }
