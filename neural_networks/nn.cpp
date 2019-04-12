@@ -123,8 +123,21 @@ void EvaluateNetworkLoss(const Eigen::VectorXd& input,
   Eigen::VectorXd loss_gradient;
   *loss = Loss(network_output, label, loss_function, &loss_gradient);
 
-  // TODO: Compute gradients of loss w.r.t. network params. For now, leave
-  // weight_gradients and bias_gradients unpopulated.
+  // Compute gradients of loss w.r.t. network params.
+  for (size_t i = 0; i < network_weight_gradients.size(); ++i) {
+    // TODO(charlie-or): Make this N-dimensional.
+    assert(loss_gradient.size() == 1);
+    const double loss_gradient_1d = loss_gradient(0);
+    weight_gradients->emplace_back(network_weight_gradients.at(i) *
+                                   loss_gradient_1d);
+  }
+  for (size_t i = 0; i < network_bias_gradients.size(); ++i) {
+    // TODO(charlie-or): Make this N-dimensional.
+    assert(loss_gradient.size() == 1);
+    const double loss_gradient_1d = loss_gradient(0);
+    bias_gradients->emplace_back(network_bias_gradients.at(i) *
+                                 loss_gradient_1d);
+  }
 }
 
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
@@ -168,13 +181,19 @@ Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,
   switch (loss_function) {
     case LossFunction::CROSS_ENTROPY: {
       // TODO: Make this N-dimensional.
+      assert(label.size() == 1);
+      assert(input.size() == 1);
+
       const double label_1d = label(0);
       const double p_predicted_1d = input(0);
       const double loss_1d = -1 * (label_1d * log(p_predicted_1d) +
                                    (1 - label_1d) * log(1 - p_predicted_1d));
       const Eigen::VectorXd loss = loss_1d * Eigen::VectorXd::Ones(1);
 
-      // TODO: Compute gradients.
+      // Compute gradients.
+      const double dloss_dpredicted_1d = -label_1d * (1 / p_predicted_1d) -
+                                         (label_1d - 1) / (1 - p_predicted_1d);
+      *loss_gradient = dloss_dpredicted_1d * Eigen::VectorXd::Ones(1);
       return loss;
       break;
     }

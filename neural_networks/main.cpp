@@ -409,6 +409,15 @@ void ComputeLoss(const NeuralNetworkParameters& nn,
   std::cerr << "Label: " << p_label << ", Prediction: " << p_predicted
             << ", Loss: " << loss << std::endl;
 
+  Eigen::VectorXd loss_eval_function;
+  std::vector<Eigen::MatrixXd> weight_gradients_eval_function;
+  std::vector<Eigen::VectorXd> bias_gradients_eval_function;
+  EvaluateNetworkLoss(input, nn, label, LossFunction::CROSS_ENTROPY,
+                      &loss_eval_function, &weight_gradients_eval_function,
+                      &bias_gradients_eval_function);
+  std::cerr << "Loss computed by EvaluateNetworkLoss: " << std::endl
+            << loss_eval_function << std::endl;
+
   // Want: dloss/dweights
   // Have: dloss/dppredicted, dppredicted/weights
   // dloss/dweights = dloss/dpredicted * dpredicted/dweights
@@ -454,6 +463,26 @@ void ComputeLoss(const NeuralNetworkParameters& nn,
               << analytical_bias_gradient - loss_bias_gradients.at(i)
               << std::endl;
   }
+
+  // Compare gradients computed in EvaluateNetworkLoss with numerical gradients.
+  for (size_t i = 0; i < 3; ++i) {
+    const Eigen::MatrixXd analytical_weight_gradient =
+        weight_gradients_eval_function.at(i);
+    const Eigen::MatrixXd analytical_bias_gradient =
+        bias_gradients_eval_function.at(i);
+    std::cerr << "Layer "
+              << " (numerical - analytical from EvaluateNetworkLoss) weight "
+                 "gradient difference: "
+              << std::endl
+              << analytical_weight_gradient - loss_weight_gradients.at(i)
+              << std::endl;
+    std::cerr << "Layer "
+              << " (numerical - analytical from EvaluateNetworkLoss) bias "
+                 "gradient difference: "
+              << std::endl
+              << analytical_bias_gradient - loss_bias_gradients.at(i)
+              << std::endl;
+  }
 }
 
 // f(input; weights & biases) = output
@@ -475,7 +504,7 @@ int main() {
       nodes_per_hidden_layer, ActivationFunction::SIGMOID,
       ActivationFunction::SIGMOID);
 
-  ComputeGradientsTest(nn, input);
+  // ComputeGradientsTest(nn, input);
 
   // Label for a single test datapoint.
   const Eigen::VectorXd label = Eigen::VectorXd::Ones(output_dimension);
