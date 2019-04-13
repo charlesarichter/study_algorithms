@@ -124,15 +124,20 @@ void EvaluateNetworkLoss(const Eigen::VectorXd& input,
   *loss = Loss(network_output, label, loss_function, &loss_gradient);
 
   // Compute gradients of loss w.r.t. network params.
+  // TODO(charlie-or): Make this N-dimensional. In order to do that, you would
+  // have to have multi-output support everywhere else in the code. Instead of
+  // the derivative of a single output with respect to each weight in a layer
+  // (i.e., 2D matrix) you would have to have the derivative of each output with
+  // respect to each weight in a layer (i.e., a stack of 2D matrices, or a 3D
+  // tensor). For now, we just assume that we have a scalar output and scalar
+  // loss function and assert that its dimension is 1.
   for (size_t i = 0; i < network_weight_gradients.size(); ++i) {
-    // TODO(charlie-or): Make this N-dimensional.
     assert(loss_gradient.size() == 1);
     const double loss_gradient_1d = loss_gradient(0);
     weight_gradients->emplace_back(network_weight_gradients.at(i) *
                                    loss_gradient_1d);
   }
   for (size_t i = 0; i < network_bias_gradients.size(); ++i) {
-    // TODO(charlie-or): Make this N-dimensional.
     assert(loss_gradient.size() == 1);
     const double loss_gradient_1d = loss_gradient(0);
     bias_gradients->emplace_back(network_bias_gradients.at(i) *

@@ -386,8 +386,9 @@ void ComputeGradientsTest(const NeuralNetworkParameters& nn,
   }
 }
 
-void ComputeLoss(const NeuralNetworkParameters& nn,
-                 const Eigen::VectorXd& input, const Eigen::VectorXd& label) {
+void ComputeLossTest(const NeuralNetworkParameters& nn,
+                     const Eigen::VectorXd& input,
+                     const Eigen::VectorXd& label) {
   Eigen::VectorXd net_output;
   std::vector<Eigen::MatrixXd> net_weight_gradients;
   std::vector<Eigen::VectorXd> net_bias_gradients;
@@ -406,6 +407,7 @@ void ComputeLoss(const NeuralNetworkParameters& nn,
   const double loss =
       -1 * (p_label * log(p_predicted) + (1 - p_label) * log(1 - p_predicted));
 
+  std::cerr << "Manual calculation:" << std::endl;
   std::cerr << "Label: " << p_label << ", Prediction: " << p_predicted
             << ", Loss: " << loss << std::endl;
 
@@ -493,6 +495,32 @@ void ComputeLoss(const NeuralNetworkParameters& nn,
 // Cross-entropy loss for classification/binary labels.
 //
 
+void TrainBackpropTest(const NeuralNetworkParameters& nn,
+                       const Eigen::VectorXd& input,
+                       const Eigen::VectorXd& label) {
+  const double step_size = 1e-2;
+  const int max_iterations = 1000;
+  NeuralNetworkParameters nn_update = nn;
+
+  for (int i = 0; i < max_iterations; ++i) {
+    Eigen::VectorXd loss;
+    std::vector<Eigen::MatrixXd> weight_gradients;
+    std::vector<Eigen::VectorXd> bias_gradients;
+    EvaluateNetworkLoss(input, nn_update, label, LossFunction::CROSS_ENTROPY,
+                        &loss, &weight_gradients, &bias_gradients);
+
+    std::cerr << "Loss: " << loss << std::endl;
+
+    // Take a step in the gradient direction.
+    for (size_t j = 0; j < weight_gradients.size(); ++j) {
+      nn_update.weights.at(j) += -1 * step_size * weight_gradients.at(j);
+    }
+    for (size_t j = 0; j < bias_gradients.size(); ++j) {
+      nn_update.biases.at(j) += -1 * step_size * bias_gradients.at(j);
+    }
+  }
+}
+
 int main() {
   const int input_dimension = 2;
   const int output_dimension = 1;
@@ -504,11 +532,13 @@ int main() {
       nodes_per_hidden_layer, ActivationFunction::SIGMOID,
       ActivationFunction::SIGMOID);
 
-  // ComputeGradientsTest(nn, input);
-
   // Label for a single test datapoint.
   const Eigen::VectorXd label = Eigen::VectorXd::Ones(output_dimension);
-  ComputeLoss(nn, input, label);
+
+  // ComputeGradientsTest(nn, input);
+  // ComputeLossTest(nn, input, label);
+
+  TrainBackpropTest(nn, input, label);
 
   return 0;
 }
