@@ -129,8 +129,10 @@ void EvaluateNetworkLoss(const Eigen::VectorXd& input,
   // the derivative of a single output with respect to each weight in a layer
   // (i.e., 2D matrix) you would have to have the derivative of each output with
   // respect to each weight in a layer (i.e., a stack of 2D matrices, or a 3D
-  // tensor). For now, we just assume that we have a scalar output and scalar
-  // loss function and assert that its dimension is 1.
+  // tensor, or a 2D matrix where each column could be wrapped into a matrix of
+  // gradients for a particular output). For now, we just assume that we have
+  // a scalar output and scalar loss function and assert that its dimension
+  // is 1.
   for (size_t i = 0; i < network_weight_gradients.size(); ++i) {
     assert(loss_gradient.size() == 1);
     const double loss_gradient_1d = loss_gradient(0);
