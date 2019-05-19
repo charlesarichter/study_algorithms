@@ -185,6 +185,21 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
       // outputs represents the probability that the coin flip result is "heads"
       // and the other output represents the probability that the coin flip
       // result is "tails" (i.e., the complement).
+      Eigen::VectorXd result_unnormalized = Eigen::VectorXd::Zero(input.size());
+      double activation_sum = 0;
+      for (size_t i = 0; i < input.size(); ++i) {
+        double activation_unnormalized = exp(input(i));
+        result_unnormalized(i) = activation_unnormalized;
+        activation_sum += activation_unnormalized;
+      }
+      output = result_unnormalized / activation_sum;
+
+      // Gradient of softmax: f_i(x)*(kroneker_delta_ij - f_j(x))
+      // where f_i(x) = exp(x_i) / sum_j^N(exp(x_j)
+      //
+      // NOTE: The softmax gradient will be a matrix.
+      throw std::runtime_error("Softmax gradient not implemented yet.");
+
       break;
     }
     default: {
