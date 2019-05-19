@@ -159,19 +159,32 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
       *activation_gradient = Eigen::VectorXd::Ones(input.size());
       break;
     }
+    case ActivationFunction::RELU: {
+      break;
+    }
     case ActivationFunction::SIGMOID: {
-      *activation_gradient = Eigen::VectorXd::Zero(input.size());
+      // The "Sigmoid" (a.k.a. "Logistic") function squashes each element in the
+      // input into the range (0,1). These outputs are independent of one
+      // another. There is no normalization across all the outputs resulting
+      // from a vector of inputs (unlike Softmax, which is normalized across
+      // outputs).
 
       // TODO: More efficient/vectorized computation.
+      *activation_gradient = Eigen::VectorXd::Zero(input.size());
       for (size_t i = 0; i < input.size(); ++i) {
-        const double f = 1 / (1 + exp(-1 * input(i)));
+        const double f = 1 / (1 + exp(-1 * input(i)));  // "Sigmoid"/"Logistic"
         output(i) = f;
         (*activation_gradient)(i) = f * (1 - f);
       }
-
       break;
     }
-    case ActivationFunction::RELU: {
+    case ActivationFunction::SOFTMAX: {
+      // The Softmax function is a multi-dimensional generalization of the
+      // logistic function. When the number of output dimensions is 2, the
+      // softmax function is equivalent to the logistic function. One of the
+      // outputs represents the probability that the coin flip result is "heads"
+      // and the other output represents the probability that the coin flip
+      // result is "tails" (i.e., the complement).
       break;
     }
     default: {

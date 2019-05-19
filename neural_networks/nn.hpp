@@ -2,7 +2,7 @@
 #include <vector>
 
 // NOTE: See https://en.wikipedia.org/wiki/activation_function
-enum class ActivationFunction { LINEAR, SIGMOID, RELU };
+enum class ActivationFunction { LINEAR, RELU, SIGMOID, SOFTMAX };
 
 enum class LossFunction { SQUARED_ERROR, CROSS_ENTROPY };
 
