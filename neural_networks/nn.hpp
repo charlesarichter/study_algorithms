@@ -33,7 +33,7 @@ void EvaluateNetworkLoss(const Eigen::VectorXd& input,
 
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
-                           Eigen::VectorXd* activation_gradient);
+                           Eigen::MatrixXd* activation_gradient);
 
 Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,
                      const LossFunction loss_function,

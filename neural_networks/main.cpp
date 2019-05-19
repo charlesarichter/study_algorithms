@@ -229,22 +229,22 @@ void ComputeGradientsThreeHiddenLayerHardcoded(
 
   // Manual.
   const Eigen::VectorXd l0_pre_act = nn.weights.at(0) * input + nn.biases.at(0);
-  Eigen::VectorXd l0_post_act_grad;
+  Eigen::MatrixXd l0_post_act_grad;
   const Eigen::VectorXd l0_post_act =
       Activation(l0_pre_act, ActivationFunction::SIGMOID, &l0_post_act_grad);
   const Eigen::VectorXd l1_pre_act =
       nn.weights.at(1) * l0_post_act + nn.biases.at(1);
-  Eigen::VectorXd l1_post_act_grad;
+  Eigen::MatrixXd l1_post_act_grad;
   const Eigen::VectorXd l1_post_act =
       Activation(l1_pre_act, ActivationFunction::SIGMOID, &l1_post_act_grad);
   const Eigen::VectorXd l2_pre_act =
       nn.weights.at(2) * l1_post_act + nn.biases.at(2);
-  Eigen::VectorXd l2_post_act_grad;
+  Eigen::MatrixXd l2_post_act_grad;
   const Eigen::VectorXd l2_post_act =
       Activation(l2_pre_act, ActivationFunction::SIGMOID, &l2_post_act_grad);
   const Eigen::VectorXd l3_pre_act =
       nn.weights.at(3) * l2_post_act + nn.biases.at(3);
-  Eigen::VectorXd l3_post_act_grad;
+  Eigen::MatrixXd l3_post_act_grad;
   const Eigen::VectorXd l3_post_act =
       Activation(l3_pre_act, ActivationFunction::SIGMOID, &l3_post_act_grad);
 
@@ -254,12 +254,10 @@ void ComputeGradientsThreeHiddenLayerHardcoded(
   // dy/dA3 = f3'(layer_2_pre_act) * layer_2_post_act
   const Eigen::MatrixXd a = Eigen::MatrixXd::Ones(1, 1);
   const Eigen::MatrixXd dydw3 =
-      a.cwiseProduct(l3_post_act_grad.transpose()).transpose() *
-      l2_post_act.transpose();
+      (a * l3_post_act_grad).transpose() * l2_post_act.transpose();
 
   // dy/db3 = f3'(layer_2_pre_act)
-  const Eigen::VectorXd dydb3 =
-      a.cwiseProduct(l3_post_act_grad.transpose()).transpose();
+  const Eigen::VectorXd dydb3 = (a * l3_post_act_grad).transpose();
   // std::cerr << "dydb3 " << std::endl << dydb3 << std::endl;
 
   manual_weight_gradients->at(3) = dydw3;
@@ -267,17 +265,14 @@ void ComputeGradientsThreeHiddenLayerHardcoded(
 
   // dy/dA2 = f3'(layer_3_pre_act) * A3
   //         * f2'(layer_2_pre_act) * layer_1_post_act
-  const Eigen::MatrixXd b =
-      a.cwiseProduct(l3_post_act_grad.transpose()) * nn.weights.at(3);
+  const Eigen::MatrixXd b = a * l3_post_act_grad * nn.weights.at(3);
   const Eigen::MatrixXd dydw2 =
-      b.cwiseProduct(l2_post_act_grad.transpose()).transpose() *
-      l1_post_act.transpose();
+      (b * l2_post_act_grad).transpose() * l1_post_act.transpose();
   // std::cerr << "dydw2 " << std::endl << dydw2 << std::endl;
 
   // dy/db2 = f3'(layer_3_pre_act) * A3
   //         * f2'(layer_2_pre_act)
-  const Eigen::VectorXd dydb2 =
-      b.cwiseProduct(l2_post_act_grad.transpose()).transpose();
+  const Eigen::VectorXd dydb2 = (b * l2_post_act_grad).transpose();
   // std::cerr << "dydb2 " << std::endl << dydb2 << std::endl;
 
   manual_weight_gradients->at(2) = dydw2;
@@ -286,18 +281,15 @@ void ComputeGradientsThreeHiddenLayerHardcoded(
   // dy/dA1 = f3'(layer_3_pre_act) * A3
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * layer_0_post_act
-  const Eigen::MatrixXd c =
-      b.cwiseProduct(l2_post_act_grad.transpose()) * nn.weights.at(2);
+  const Eigen::MatrixXd c = b * l2_post_act_grad * nn.weights.at(2);
   const Eigen::MatrixXd dydw1 =
-      c.cwiseProduct(l1_post_act_grad.transpose()).transpose() *
-      l0_post_act.transpose();
+      (c * l1_post_act_grad).transpose() * l0_post_act.transpose();
   // std::cerr << "dydw1 " << std::endl << dydw1 << std::endl;
 
   // dy/db1 = f3'(layer_3_pre_act) * A3
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act)
-  const Eigen::MatrixXd dydb1 =
-      c.cwiseProduct(l1_post_act_grad.transpose()).transpose();
+  const Eigen::MatrixXd dydb1 = (c * l1_post_act_grad).transpose();
   // std::cerr << "dydb1 " << std::endl << dydb1 << std::endl;
 
   manual_weight_gradients->at(1) = dydw1;
@@ -307,19 +299,16 @@ void ComputeGradientsThreeHiddenLayerHardcoded(
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * A1
   //        * f0'(layer_0_pre_act) * input
-  const Eigen::MatrixXd d =
-      c.cwiseProduct(l1_post_act_grad.transpose()) * nn.weights.at(1);
+  const Eigen::MatrixXd d = c * l1_post_act_grad * nn.weights.at(1);
   const Eigen::MatrixXd dydw0 =
-      d.cwiseProduct(l0_post_act_grad.transpose()).transpose() *
-      input.transpose();
+      (d * l0_post_act_grad).transpose() * input.transpose();
   // std::cerr << "dydw0 " << std::endl << dydw0 << std::endl;
 
   // dy/db0 = f3'(layer_3_pre_act) * A3
   //        * f2'(layer_2_pre_act) * A2
   //        * f1'(layer_1_pre_act) * A1
   //        * f0'(layer_0_pre_act)
-  const Eigen::MatrixXd dydb0 =
-      d.cwiseProduct(l0_post_act_grad.transpose()).transpose();
+  const Eigen::MatrixXd dydb0 = (d * l0_post_act_grad).transpose();
   // std::cerr << "dydb0 " << std::endl << dydb0 << std::endl;
 
   manual_weight_gradients->at(0) = dydw0;
@@ -535,10 +524,9 @@ int main() {
   // Label for a single test datapoint.
   const Eigen::VectorXd label = Eigen::VectorXd::Ones(output_dimension);
 
-  // ComputeGradientsTest(nn, input);
+  ComputeGradientsTest(nn, input);
   // ComputeLossTest(nn, input, label);
-
-  TrainBackpropTest(nn, input, label);
+  // TrainBackpropTest(nn, input, label);
 
   return 0;
 }

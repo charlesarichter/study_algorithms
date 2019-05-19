@@ -64,7 +64,7 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
                      std::vector<Eigen::VectorXd>* bias_gradients) {
   // Forward pass
   Eigen::VectorXd current_value = input;
-  std::vector<Eigen::VectorXd> activation_gradients;
+  std::vector<Eigen::MatrixXd> activation_gradients;
   std::vector<Eigen::VectorXd> post_activation_results;
   post_activation_results.emplace_back(input);
   for (int i = 0; i < params.weights.size(); ++i) {
@@ -73,7 +73,7 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
         params.weights.at(i) * current_value + params.biases.at(i);
 
     // Compute activation output.
-    Eigen::VectorXd activation_gradient;
+    Eigen::MatrixXd activation_gradient;
     current_value =
         Activation(pre_activation, params.activation_functions.at(i),
                    &activation_gradient);
@@ -93,12 +93,10 @@ void EvaluateNetwork(const Eigen::VectorXd& input,
   bias_gradients->resize(params.weights.size());
 
   for (int i = (params.weights.size() - 1); i >= 0; --i) {
-    const Eigen::MatrixXd dydb =
-        a.cwiseProduct(activation_gradients.at(i).transpose()).transpose();
+    const Eigen::MatrixXd dydb = (a * activation_gradients.at(i)).transpose();
     const Eigen::MatrixXd dydw =
         dydb * post_activation_results.at(i).transpose();
-    a = a.cwiseProduct(activation_gradients.at(i).transpose()) *
-        params.weights.at(i);
+    a = a * activation_gradients.at(i) * params.weights.at(i);
 
     weight_gradients->at(i) = dydw;
     bias_gradients->at(i) = dydb;
@@ -149,14 +147,15 @@ void EvaluateNetworkLoss(const Eigen::VectorXd& input,
 
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
-                           Eigen::VectorXd* activation_gradient) {
+                           Eigen::MatrixXd* activation_gradient) {
   Eigen::VectorXd output(input.size());
   switch (activation_function) {
     case ActivationFunction::LINEAR: {
       output = input;
 
       // Slope of one.
-      *activation_gradient = Eigen::VectorXd::Ones(input.size());
+      *activation_gradient =
+          Eigen::MatrixXd::Identity(input.size(), input.size());
       break;
     }
     case ActivationFunction::RELU: {
@@ -170,11 +169,11 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
       // outputs).
 
       // TODO: More efficient/vectorized computation.
-      *activation_gradient = Eigen::VectorXd::Zero(input.size());
+      *activation_gradient = Eigen::MatrixXd::Zero(input.size(), input.size());
       for (size_t i = 0; i < input.size(); ++i) {
         const double f = 1 / (1 + exp(-1 * input(i)));  // "Sigmoid"/"Logistic"
         output(i) = f;
-        (*activation_gradient)(i) = f * (1 - f);
+        (*activation_gradient)(i, i) = f * (1 - f);
       }
       break;
     }
