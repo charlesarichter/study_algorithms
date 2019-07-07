@@ -536,3 +536,33 @@ int main() {
 
   return 0;
 }
+
+// Notes for n-dimensional output:
+// - Neural network output dimension can be arbitrary for output layers like
+// softmax functions, which are used in n-class classification.
+// - Even if the neural network output is n-dimensional, all n dimensions are
+// combined into a single loss function, which means that the output of the loss
+// is still one-dimensional.
+// - For n-dimensional output, we compute the output of each element of the
+// neural network with respect to each weight and bias variable. So to
+// completely describe the weight and bias gradients, we would have:
+// 1) n outputs
+// 2) m weights (or biases) per layer
+// 3) p layers
+// So to capture the weight and bias gradients, instead of:
+//    std::vector<Eigen::MatrixXd> weight_gradients;
+//    std::vector<Eigen::VectorXd> bias_gradients;
+// We would need:
+//    std::vector<std::vector<Eigen::MatrixXd>> weight_gradients;
+//    std::vector<std::vector<Eigen::VectorXd>> bias_gradients;
+// Where the outer-most vector contains one element per layer, the
+// second-outer-most vector contains one element per output channel, and the
+// Eigen::MatrixXd (or Eigen::VectorXd) represents the gradient of the elements
+// of the weights (or biases) in that layer.
+//
+// Next Task: Extend all calculations to handle n-dimensional output as
+// described above, and test with softmax.
+//
+// Note that if we just care about gradients of weights/biases w.r.t. loss, then
+// it may be overkill and inefficient to compute, store and return the gradients
+// of weights/biases w.r.t. all of the individual outputs.
