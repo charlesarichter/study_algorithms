@@ -193,8 +193,19 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
       }
       output = result_unnormalized / activation_sum;
 
+      *activation_gradient = Eigen::MatrixXd::Zero(input.size(), input.size());
+      for (size_t i = 0; i < input.size(); ++i) {
+        for (size_t j = 0; j < input.size(); ++j) {
+          const double kroneker_delta = (i == j) ? 1.0 : 0.0;
+          (*activation_gradient)(i, j) =
+              output(i) * (kroneker_delta - output(j));
+        }
+      }
+
       // Gradient of softmax: f_i(x)*(kroneker_delta_ij - f_j(x))
       // where f_i(x) = exp(x_i) / sum_j^N(exp(x_j)
+      //
+      // Kroneker delta: 1 when i = j and 0 when i != j.
       //
       // NOTE: The softmax gradient will be a matrix. Also, note that for the
       // other activation functions implemented so far, that gradient matrix is
@@ -202,7 +213,6 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
       // code requiring all gradient matrices to be transposed to be correct for
       // dense, non-symmetric gradient matrices. It would be a good idea to run
       // a test to find that out.
-      throw std::runtime_error("Softmax gradient not implemented yet.");
 
       break;
     }

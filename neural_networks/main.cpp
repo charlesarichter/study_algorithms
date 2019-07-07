@@ -211,7 +211,9 @@ void ComputeGradientsThreeHiddenLayerHardcoded(
     const Eigen::VectorXd& input, const NeuralNetworkParameters& nn,
     std::vector<Eigen::MatrixXd>* manual_weight_gradients,
     std::vector<Eigen::VectorXd>* manual_bias_gradients) {
-  if (nn.weights.size() != 4) {
+  // Check that we have a network with three hidden layers and one output layer.
+  if (nn.weights.size() != 4 || nn.biases.size() != 4 ||
+      nn.activation_functions.size() != 4) {
     throw std::runtime_error(
         "This function is hard-coded for a network with three hidden layers");
   }
@@ -231,22 +233,22 @@ void ComputeGradientsThreeHiddenLayerHardcoded(
   const Eigen::VectorXd l0_pre_act = nn.weights.at(0) * input + nn.biases.at(0);
   Eigen::MatrixXd l0_post_act_grad;
   const Eigen::VectorXd l0_post_act =
-      Activation(l0_pre_act, ActivationFunction::SIGMOID, &l0_post_act_grad);
+      Activation(l0_pre_act, nn.activation_functions.at(0), &l0_post_act_grad);
   const Eigen::VectorXd l1_pre_act =
       nn.weights.at(1) * l0_post_act + nn.biases.at(1);
   Eigen::MatrixXd l1_post_act_grad;
   const Eigen::VectorXd l1_post_act =
-      Activation(l1_pre_act, ActivationFunction::SIGMOID, &l1_post_act_grad);
+      Activation(l1_pre_act, nn.activation_functions.at(1), &l1_post_act_grad);
   const Eigen::VectorXd l2_pre_act =
       nn.weights.at(2) * l1_post_act + nn.biases.at(2);
   Eigen::MatrixXd l2_post_act_grad;
   const Eigen::VectorXd l2_post_act =
-      Activation(l2_pre_act, ActivationFunction::SIGMOID, &l2_post_act_grad);
+      Activation(l2_pre_act, nn.activation_functions.at(2), &l2_post_act_grad);
   const Eigen::VectorXd l3_pre_act =
       nn.weights.at(3) * l2_post_act + nn.biases.at(3);
   Eigen::MatrixXd l3_post_act_grad;
   const Eigen::VectorXd l3_post_act =
-      Activation(l3_pre_act, ActivationFunction::SIGMOID, &l3_post_act_grad);
+      Activation(l3_pre_act, nn.activation_functions.at(3), &l3_post_act_grad);
 
   manual_weight_gradients->resize(nn.weights.size());
   manual_bias_gradients->resize(nn.weights.size());
@@ -516,10 +518,14 @@ int main() {
   const int num_hidden_layers = 3;
   const int nodes_per_hidden_layer = 3;
   const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
+  // NeuralNetworkParameters nn = GetRandomNeuralNetwork(
+  //     input_dimension, output_dimension, num_hidden_layers,
+  //     nodes_per_hidden_layer, ActivationFunction::SIGMOID,
+  //     ActivationFunction::SIGMOID);
   NeuralNetworkParameters nn = GetRandomNeuralNetwork(
       input_dimension, output_dimension, num_hidden_layers,
       nodes_per_hidden_layer, ActivationFunction::SIGMOID,
-      ActivationFunction::SIGMOID);
+      ActivationFunction::SOFTMAX);
 
   // Label for a single test datapoint.
   const Eigen::VectorXd label = Eigen::VectorXd::Ones(output_dimension);
