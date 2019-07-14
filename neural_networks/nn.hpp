@@ -17,11 +17,11 @@ NeuralNetworkParameters GetRandomNeuralNetwork(
     int nodes_per_hidden_layer, const ActivationFunction hidden_activation,
     const ActivationFunction output_activation);
 
-void EvaluateNetwork(const Eigen::VectorXd& input,
-                     const NeuralNetworkParameters& params,
-                     Eigen::VectorXd* output,
-                     std::vector<Eigen::MatrixXd>* weight_gradients,
-                     std::vector<Eigen::VectorXd>* bias_gradients);
+void EvaluateNetwork(
+    const Eigen::VectorXd& input, const NeuralNetworkParameters& params,
+    Eigen::VectorXd* output,
+    std::vector<std::vector<Eigen::MatrixXd>>* weight_gradients,
+    std::vector<std::vector<Eigen::VectorXd>>* bias_gradients);
 
 void EvaluateNetworkLoss(const Eigen::VectorXd& input,
                          const NeuralNetworkParameters& params,
