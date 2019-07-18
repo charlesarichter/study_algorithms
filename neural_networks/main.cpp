@@ -1,4 +1,6 @@
+#include <fstream>
 #include <iostream>
+#include <string>
 
 #include "nn.hpp"
 
@@ -585,7 +587,7 @@ void TrainBackpropTest(const NeuralNetworkParameters& nn,
   }
 }
 
-int main() {
+void RunTests() {
   const int input_dimension = 2;
   const int output_dimension = 10;
   const int num_hidden_layers = 3;
@@ -603,7 +605,50 @@ int main() {
   ComputeGradientsTest(nn, input);
   ComputeCrossEntropyLossTest(nn, input, label);
   TrainBackpropTest(nn, input, label);
+}
 
+void LoadMnist() {
+  // See https://pjreddie.com/projects/mnist-in-csv/
+  std::string mnist_csv_train("../data/mnist_train.csv");
+
+  // File pointer
+  std::fstream fin;
+
+  // Open file
+  fin.open(mnist_csv_train, std::fstream::in);
+
+  if (!fin.is_open()) {
+    std::cerr << "File not open!" << std::endl;
+  }
+
+  // Read the Data from the file as String Vector
+  std::string line;
+  while (std::getline(fin, line)) {
+    // used for breaking words
+    std::stringstream s(line);
+
+    // Read first element separately, since this is the class.
+    std::string word;
+    std::getline(s, word, ',');
+    const int class_id = std::stoi(word);
+    std::cerr << "Class ID: " << class_id << std::endl;
+
+    // Read pixels sequentially.
+    std::vector<int> image;
+    while (std::getline(s, word, ',')) {
+      const int pixel_value = std::stoi(word);
+      image.push_back(pixel_value);
+    }
+
+    std::cerr << "Number of elements in image: " << image.size() << std::endl;
+    std::cin.get();
+  }
+  return;
+}
+
+int main() {
+  // RunTests();
+  LoadMnist();
   return 0;
 }
 
