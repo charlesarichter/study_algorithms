@@ -607,7 +607,16 @@ void RunTests() {
   TrainBackpropTest(nn, input, label);
 }
 
-void LoadMnist() {
+void LoadMnist(std::vector<Eigen::VectorXd>* images,
+               std::vector<Eigen::VectorXd>* labels) {
+  const size_t num_classes = 10;
+  const size_t num_pixels = 784;
+  const size_t num_images = 60000;
+
+  // Allocate data using fill constructor
+  images->resize(num_images, Eigen::VectorXd(num_pixels));
+  labels->resize(num_images, Eigen::VectorXd::Zero(num_classes));
+
   // See https://pjreddie.com/projects/mnist-in-csv/
   std::string mnist_csv_train("../data/mnist_train.csv");
 
@@ -622,6 +631,7 @@ void LoadMnist() {
   }
 
   // Read the Data from the file as String Vector
+  size_t num_images_read = 0;
   std::string line;
   while (std::getline(fin, line)) {
     // used for breaking words
@@ -631,24 +641,59 @@ void LoadMnist() {
     std::string word;
     std::getline(s, word, ',');
     const int class_id = std::stoi(word);
-    std::cerr << "Class ID: " << class_id << std::endl;
+    // std::cerr << "Class ID: " << class_id << std::endl;
+    labels->at(num_images_read)[class_id] = 1.0;
 
     // Read pixels sequentially.
-    std::vector<int> image;
+    Eigen::VectorXd& image = images->at(num_images_read);
+
+    size_t pixel_index = 0;
     while (std::getline(s, word, ',')) {
-      const int pixel_value = std::stoi(word);
-      image.push_back(pixel_value);
+      // For now, just scale to the interval (0,1) right here.
+      const double pixel_value = static_cast<double>(std::stoi(word)) / 255;
+
+      // Faster to pre-allocate and use [] than push_/emplace_back or .at()
+      image[pixel_index] = pixel_value;
+      ++pixel_index;
     }
 
-    std::cerr << "Number of elements in image: " << image.size() << std::endl;
-    std::cin.get();
+    // std::cerr << "Number of elements in image: " << image.size() <<
+    // std::endl; std::cin.get();
+    ++num_images_read;
+    // if (num_images_read % 1000 == 0) {
+    //   std::cerr << "Loaded " << num_images_read << " images" << std::endl;
+    // }
   }
   return;
 }
 
+void MnistTest() {
+  // Load training data.
+  std::vector<Eigen::VectorXd> images;
+  std::vector<Eigen::VectorXd> labels;
+  LoadMnist(&images, &labels);
+  std::cerr << "Loaded data" << std::endl;
+
+  // Specify network. TODO: Work on proper random weight initialization.
+  const int input_dimension = images.at(0).size();
+  const int output_dimension = labels.at(0).size();
+  const int num_hidden_layers = 3;
+  const int nodes_per_hidden_layer = 100;
+  const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
+  NeuralNetworkParameters nn = GetRandomNeuralNetwork(
+      input_dimension, output_dimension, num_hidden_layers,
+      nodes_per_hidden_layer, ActivationFunction::SIGMOID,
+      ActivationFunction::SOFTMAX);
+  std::cerr << "Generated initial network" << std::endl;
+
+  // Training.
+  TrainBackpropTest(nn, images.at(0), labels.at(0));
+}
+
 int main() {
   // RunTests();
-  LoadMnist();
+  MnistTest();
+
   return 0;
 }
 
