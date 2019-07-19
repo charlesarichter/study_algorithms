@@ -15,18 +15,55 @@ std::vector<size_t> GenerateRandomIndices(const size_t max_index,
                              index_sequence.begin() + num_indices);
 }
 
+void ComputePerformanceOnTestSet(
+    const NeuralNetworkParameters& nn,
+    const std::vector<Eigen::VectorXd>& test_inputs,
+    const std::vector<Eigen::VectorXd>& test_labels) {
+  size_t num_correct = 0;
+  size_t num_eval = 200;
+  for (size_t i = 0; i < num_eval; ++i) {
+    const Eigen::VectorXd& input = test_inputs.at(i);
+    const Eigen::VectorXd& label = test_labels.at(i);
+    Eigen::VectorXd output;
+    std::vector<std::vector<Eigen::MatrixXd>> weight_gradients;
+    std::vector<std::vector<Eigen::VectorXd>> bias_gradients;
+    EvaluateNetwork(input, nn, &output, &weight_gradients, &bias_gradients);
+
+    // Get index of max coefficient of output as the predicted class.
+    Eigen::VectorXd::Index output_index;
+    output.maxCoeff(&output_index);
+
+    Eigen::VectorXd::Index label_index;
+    label.maxCoeff(&label_index);
+
+    if (output_index == label_index) {
+      ++num_correct;
+    }
+
+    // std::cerr << "output: " << output.transpose() << std::endl;
+    // std::cerr << "output index: " << output_index << std::endl;
+    // std::cerr << "label: " << label.transpose() << std::endl;
+    // std::cerr << "label index: " << label_index << std::endl;
+    // std::cin.get();
+  }
+  std::cerr << "Correctly classified " << 100 * num_correct / num_eval << "%"
+            << std::endl;
+}
+
 NeuralNetworkParameters Train(
     const NeuralNetworkParameters& nn,
     const std::vector<Eigen::VectorXd>& training_inputs,
-    const std::vector<Eigen::VectorXd>& training_labels) {
+    const std::vector<Eigen::VectorXd>& training_labels,
+    const std::vector<Eigen::VectorXd>& test_inputs,
+    const std::vector<Eigen::VectorXd>& test_labels) {
   // TODO: Move these parameters elsewhere.
   const double step_size = 5e-2;
   const int max_iterations = 1000;
-  const int mini_batch_size = 50;
+  const int mini_batch_size = 20;
   const LossFunction loss_function = LossFunction::CROSS_ENTROPY;
 
   NeuralNetworkParameters nn_update = nn;
-  for (int i = 0; i < max_iterations; ++i) {
+  for (int iteration = 0; iteration < max_iterations; ++iteration) {
     // Select a random mini-batch of data points.
     const std::vector<size_t> random_indices =
         GenerateRandomIndices(training_inputs.size(), mini_batch_size);
@@ -83,6 +120,10 @@ NeuralNetworkParameters Train(
     for (size_t j = 0; j < bias_gradients_mini_batch.size(); ++j) {
       nn_update.biases.at(j) +=
           -1 * step_size * bias_gradients_mini_batch.at(j);
+    }
+
+    if (iteration % 50 == 0) {
+      ComputePerformanceOnTestSet(nn_update, test_inputs, test_labels);
     }
   }
 }

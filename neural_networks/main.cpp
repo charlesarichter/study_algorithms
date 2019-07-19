@@ -608,24 +608,24 @@ void RunTests() {
   TrainBackpropTest(nn, input, label);
 }
 
-void LoadMnist(std::vector<Eigen::VectorXd>* images,
+void LoadMnist(const std::string& csv_filename, const size_t num_images,
+               std::vector<Eigen::VectorXd>* images,
                std::vector<Eigen::VectorXd>* labels) {
+  /**
+   * See https://pjreddie.com/projects/mnist-in-csv/
+   */
   const size_t num_classes = 10;
   const size_t num_pixels = 784;
-  const size_t num_images = 60000;
 
   // Allocate data using fill constructor
   images->resize(num_images, Eigen::VectorXd(num_pixels));
   labels->resize(num_images, Eigen::VectorXd::Zero(num_classes));
 
-  // See https://pjreddie.com/projects/mnist-in-csv/
-  std::string mnist_csv_train("../data/mnist_train.csv");
-
   // File pointer
   std::fstream fin;
 
   // Open file
-  fin.open(mnist_csv_train, std::fstream::in);
+  fin.open(csv_filename, std::fstream::in);
 
   if (!fin.is_open()) {
     std::cerr << "File not open!" << std::endl;
@@ -670,14 +670,21 @@ void LoadMnist(std::vector<Eigen::VectorXd>* images,
 
 void MnistTest() {
   // Load training data.
-  std::vector<Eigen::VectorXd> images;
-  std::vector<Eigen::VectorXd> labels;
-  LoadMnist(&images, &labels);
+  std::vector<Eigen::VectorXd> training_images;
+  std::vector<Eigen::VectorXd> training_labels;
+  LoadMnist("../data/mnist_train.csv", 60000, &training_images,
+            &training_labels);
+
+  // Load test data.
+  std::vector<Eigen::VectorXd> test_images;
+  std::vector<Eigen::VectorXd> test_labels;
+  LoadMnist("../data/mnist_test.csv", 10000, &test_images, &test_labels);
+
   std::cerr << "Loaded data" << std::endl;
 
   // Specify network. TODO: Work on proper random weight initialization.
-  const int input_dimension = images.at(0).size();
-  const int output_dimension = labels.at(0).size();
+  const int input_dimension = training_images.at(0).size();
+  const int output_dimension = training_labels.at(0).size();
   const int num_hidden_layers = 3;
   const int nodes_per_hidden_layer = 100;
   const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
@@ -689,7 +696,8 @@ void MnistTest() {
 
   // Training.
   // TrainBackpropTest(nn, images.at(0), labels.at(0));
-  const NeuralNetworkParameters nn_trained = Train(nn, images, labels);
+  const NeuralNetworkParameters nn_trained =
+      Train(nn, training_images, training_labels, test_images, test_labels);
 }
 
 int main() {
