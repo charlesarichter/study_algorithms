@@ -1,3 +1,5 @@
+#pragma once
+
 #include <eigen3/Eigen/Dense>
 #include <vector>
 
@@ -35,6 +37,7 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
                            Eigen::MatrixXd* activation_gradient);
 
+// TODO: Make Loss output a scalar...not sure why this ever returned a vector.
 Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,
                      const LossFunction loss_function,
                      Eigen::VectorXd* loss_gradient);

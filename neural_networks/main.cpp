@@ -3,6 +3,7 @@
 #include <string>
 
 #include "nn.hpp"
+#include "training.hpp"
 
 void ComputeNetworkGradientsNumerically(
     const Eigen::VectorXd& input, const NeuralNetworkParameters& nn,
@@ -687,7 +688,8 @@ void MnistTest() {
   std::cerr << "Generated initial network" << std::endl;
 
   // Training.
-  TrainBackpropTest(nn, images.at(0), labels.at(0));
+  // TrainBackpropTest(nn, images.at(0), labels.at(0));
+  const NeuralNetworkParameters nn_trained = Train(nn, images, labels);
 }
 
 int main() {
@@ -701,8 +703,8 @@ int main() {
 // - Neural network output dimension can be arbitrary for output layers like
 // softmax functions, which are used in n-class classification.
 // - Even if the neural network output is n-dimensional, all n dimensions are
-// combined into a single loss function, which means that the output of the loss
-// is still one-dimensional.
+// combined into a single loss function, which means that the output of the
+// loss is still one-dimensional.
 // - For n-dimensional output, we compute the output of each element of the
 // neural network with respect to each weight and bias variable. So to
 // completely describe the weight and bias gradients, we would have:
@@ -717,22 +719,23 @@ int main() {
 //    std::vector<std::vector<Eigen::VectorXd>> bias_gradients;
 // Where the outer-most vector contains one element per layer, the
 // second-outer-most vector contains one element per output channel, and the
-// Eigen::MatrixXd (or Eigen::VectorXd) represents the gradient of the elements
-// of the weights (or biases) in that layer.
+// Eigen::MatrixXd (or Eigen::VectorXd) represents the gradient of the
+// elements of the weights (or biases) in that layer.
 //
 // Next Task: Extend all calculations to handle n-dimensional output as
 // described above, and test with softmax.
 //
-// Note that if we just care about gradients of weights/biases w.r.t. loss, then
-// it may be overkill and inefficient to compute, store and return the gradients
-// of weights/biases w.r.t. all of the individual outputs.
+// Note that if we just care about gradients of weights/biases w.r.t. loss,
+// then it may be overkill and inefficient to compute, store and return the
+// gradients of weights/biases w.r.t. all of the individual outputs.
 //
-// The current code is pretty much entirely built around the assumption that the
-// neural network output is one-dimensional. That is what allows us to use:
+// The current code is pretty much entirely built around the assumption that
+// the neural network output is one-dimensional. That is what allows us to
+// use:
 //    std::vector<Eigen::MatrixXd> weight_gradients;
 //    std::vector<Eigen::VectorXd> bias_gradients;
 // If we ever want the ability to compute gradients of some subset of the
-// network, say the gradient of the output of the hidden layers (which may have
-// n-dim output) or the pre-loss n-dim activation, we will need to extend our
-// calculations to add a diension to the way we store and backpropagate
+// network, say the gradient of the output of the hidden layers (which may
+// have n-dim output) or the pre-loss n-dim activation, we will need to extend
+// our calculations to add a diension to the way we store and backpropagate
 // gradients.
