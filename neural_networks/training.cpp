@@ -110,7 +110,8 @@ NeuralNetworkParameters Train(
       bias_gradients_mini_batch.at(j) /= mini_batch_size;
     }
 
-    std::cerr << "Mini-Batch Loss: " << mini_batch_loss << std::endl;
+    std::cerr << "Iteration: " << iteration
+              << ", Mini-Batch Loss: " << mini_batch_loss << std::endl;
 
     // Take a step in the gradient direction.
     for (size_t j = 0; j < weight_gradients_mini_batch.size(); ++j) {
@@ -126,4 +127,5 @@ NeuralNetworkParameters Train(
       ComputePerformanceOnTestSet(nn_update, test_inputs, test_labels);
     }
   }
+  return nn_update;
 }
