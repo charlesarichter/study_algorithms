@@ -87,9 +87,9 @@ NeuralNetworkParameters Train(
       Eigen::VectorXd loss;
       std::vector<Eigen::MatrixXd> weight_gradients;
       std::vector<Eigen::VectorXd> bias_gradients;
-      EvaluateNetworkLoss(training_inputs[i], nn_update, training_labels[i],
-                          loss_function, &loss, &weight_gradients,
-                          &bias_gradients);
+      EvaluateNetworkLossCombinedImplementation(
+          training_inputs[i], nn_update, training_labels[i], loss_function,
+          &loss, &weight_gradients, &bias_gradients);
       mini_batch_loss += loss;
 
       // Add gradient values for each element in the mini-batch.
@@ -122,7 +122,7 @@ NeuralNetworkParameters Train(
           -1 * step_size * bias_gradients_mini_batch.at(j);
     }
 
-    if (iteration % 50 == 0) {
+    if (iteration > 0 && iteration % 200 == 0) {
       ComputePerformanceOnTestSet(nn_update, test_inputs, test_labels);
     }
   }

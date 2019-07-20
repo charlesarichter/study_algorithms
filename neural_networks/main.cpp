@@ -476,6 +476,16 @@ void ComputeCrossEntropyLossTest(const NeuralNetworkParameters& nn,
   std::cerr << "Loss computed by EvaluateNetworkLoss: " << loss_eval_function
             << std::endl;
 
+  Eigen::VectorXd loss_eval_function_combined;
+  std::vector<Eigen::MatrixXd> weight_gradients_eval_function_combined;
+  std::vector<Eigen::VectorXd> bias_gradients_eval_function_combined;
+  EvaluateNetworkLossCombinedImplementation(
+      input, nn, label, loss_function, &loss_eval_function_combined,
+      &weight_gradients_eval_function_combined,
+      &bias_gradients_eval_function_combined);
+  std::cerr << "Loss computed by EvaluateNetworkLossCombinedImplementation: "
+            << loss_eval_function_combined << std::endl;
+
   // // Want: dloss/dweights
   // // Have: dloss/dppredicted, dppredicted/weights
   // // dloss/dweights = dloss/dpredicted * dpredicted/dweights
@@ -553,6 +563,29 @@ void ComputeCrossEntropyLossTest(const NeuralNetworkParameters& nn,
               << analytical_bias_gradient - loss_bias_gradients.at(i)
               << std::endl;
   }
+
+  // Compare gradients computed in EvaluateNetworkLossCombinedImplementation
+  // with numerical gradients.
+  for (size_t i = 0; i < 3; ++i) {
+    const Eigen::MatrixXd analytical_weight_gradient =
+        weight_gradients_eval_function_combined.at(i);
+    const Eigen::MatrixXd analytical_bias_gradient =
+        bias_gradients_eval_function_combined.at(i);
+    std::cerr << "Layer "
+              << " (numerical - analytical from "
+                 "EvaluateNetworkLossCombinedImplementation) weight "
+                 "gradient difference: "
+              << std::endl
+              << analytical_weight_gradient - loss_weight_gradients.at(i)
+              << std::endl;
+    std::cerr << "Layer "
+              << " (numerical - analytical from "
+                 "EvaluateNetworkLossCombinedImplementation) bias "
+                 "gradient difference: "
+              << std::endl
+              << analytical_bias_gradient - loss_bias_gradients.at(i)
+              << std::endl;
+  }
 }
 
 // f(input; weights & biases) = output
@@ -573,8 +606,9 @@ void TrainBackpropTest(const NeuralNetworkParameters& nn,
     Eigen::VectorXd loss;
     std::vector<Eigen::MatrixXd> weight_gradients;
     std::vector<Eigen::VectorXd> bias_gradients;
-    EvaluateNetworkLoss(input, nn_update, label, LossFunction::CROSS_ENTROPY,
-                        &loss, &weight_gradients, &bias_gradients);
+    EvaluateNetworkLossCombinedImplementation(
+        input, nn_update, label, LossFunction::CROSS_ENTROPY, &loss,
+        &weight_gradients, &bias_gradients);
 
     std::cerr << "Loss: " << loss << std::endl;
 

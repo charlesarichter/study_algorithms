@@ -188,6 +188,52 @@ void EvaluateNetworkLoss(const Eigen::VectorXd& input,
   }
 }
 
+void EvaluateNetworkLossCombinedImplementation(
+    const Eigen::VectorXd& input, const NeuralNetworkParameters& params,
+    const Eigen::VectorXd& label, const LossFunction& loss_function,
+    Eigen::VectorXd* loss, std::vector<Eigen::MatrixXd>* weight_gradients,
+    std::vector<Eigen::VectorXd>* bias_gradients) {
+  // Forward pass
+  Eigen::VectorXd current_value = input;
+  std::vector<Eigen::MatrixXd> activation_gradients;
+  std::vector<Eigen::VectorXd> post_activation_results;
+  post_activation_results.emplace_back(input);
+  for (int i = 0; i < params.weights.size(); ++i) {
+    // Compute pre-activation input.
+    const Eigen::VectorXd pre_activation =
+        params.weights.at(i) * current_value + params.biases.at(i);
+
+    // Compute activation output.
+    Eigen::MatrixXd activation_gradient;
+    current_value =
+        Activation(pre_activation, params.activation_functions.at(i),
+                   &activation_gradient);
+    post_activation_results.emplace_back(current_value);
+    activation_gradients.emplace_back(activation_gradient);
+  }
+
+  // Compute loss
+  Eigen::VectorXd loss_gradient;
+  *loss = Loss(current_value, label, loss_function, &loss_gradient);
+
+  // Allocate gradient output
+  weight_gradients->resize(params.weights.size());
+  bias_gradients->resize(params.weights.size());
+
+  // Backward pass
+  Eigen::MatrixXd a = loss_gradient.transpose();
+  for (int i = (params.weights.size() - 1); i >= 0; --i) {
+    Eigen::MatrixXd current_act_grad;
+    current_act_grad = activation_gradients.at(i);
+    const Eigen::MatrixXd dydb = (a * current_act_grad).transpose();
+    const Eigen::MatrixXd dydw =
+        dydb * post_activation_results.at(i).transpose();
+    a = a * current_act_grad * params.weights.at(i);
+    weight_gradients->at(i) = dydw;
+    bias_gradients->at(i) = dydb;
+  }
+}
+
 Eigen::VectorXd Activation(const Eigen::VectorXd& input,
                            const ActivationFunction activation_function,
                            Eigen::MatrixXd* activation_gradient) {
