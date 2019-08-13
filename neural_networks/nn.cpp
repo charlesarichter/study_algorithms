@@ -15,9 +15,28 @@ NeuralNetworkParameters GetRandomNeuralNetwork(
 
   // Randomly initialize weights and biases for each layer
   for (int i = 0; i < num_hidden_layers - 1; ++i) {
-    nn.weights.emplace_back(Eigen::MatrixXd::Random(nodes_per_hidden_layer,
+    // Scale random weights based on the type of activation.
+    double weight_coefficient = 1.0;
+    switch (hidden_activation) {
+      case ActivationFunction::RELU: {
+        weight_coefficient = 0.001;
+        break;
+      }
+      case ActivationFunction::SIGMOID: {
+        weight_coefficient = 0.1;
+        break;
+      }
+      default: {
+        // TODO: Fill me in.
+        break;
+      }
+    }
+
+    nn.weights.emplace_back(weight_coefficient *
+                            Eigen::MatrixXd::Random(nodes_per_hidden_layer,
                                                     nodes_per_hidden_layer));
-    nn.biases.emplace_back(Eigen::VectorXd::Random(nodes_per_hidden_layer));
+    nn.biases.emplace_back(weight_coefficient *
+                           Eigen::VectorXd::Random(nodes_per_hidden_layer));
     nn.activation_functions.emplace_back(hidden_activation);
   }
 
@@ -248,6 +267,17 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
       break;
     }
     case ActivationFunction::RELU: {
+      // TODO: More efficient/vectorized computation.
+      *activation_gradient = Eigen::MatrixXd::Zero(input.size(), input.size());
+      for (size_t i = 0; i < input.size(); ++i) {
+        if (input(i) <= 0) {
+          output(i) = 0;
+          (*activation_gradient)(i, i) = 0;
+        } else {
+          output(i) = input(i);
+          (*activation_gradient)(i, i) = 1;
+        }
+      }
       break;
     }
     case ActivationFunction::SIGMOID: {
@@ -280,6 +310,11 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
         result_unnormalized(i) = activation_unnormalized;
         activation_sum += activation_unnormalized;
       }
+      // std::cerr << "softmax input " << input.transpose() << std::endl;
+      // std::cerr << "softmax result unnormalized "
+      //           << result_unnormalized.transpose() << std::endl;
+      // std::cerr << "softmax activation sum " << activation_sum << std::endl;
+      // std::cin.get();
       output = result_unnormalized / activation_sum;
 
       *activation_gradient = Eigen::MatrixXd::Zero(input.size(), input.size());

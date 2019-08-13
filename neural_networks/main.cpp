@@ -630,7 +630,7 @@ void RunTests() {
   const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
   NeuralNetworkParameters nn = GetRandomNeuralNetwork(
       input_dimension, output_dimension, num_hidden_layers,
-      nodes_per_hidden_layer, ActivationFunction::SIGMOID,
+      nodes_per_hidden_layer, ActivationFunction::RELU,
       ActivationFunction::SOFTMAX);
 
   // Label for a single test datapoint. One-hot with the first element = 1.
@@ -684,20 +684,17 @@ void LoadMnist(const std::string& csv_filename, const size_t num_images,
 
     size_t pixel_index = 0;
     while (std::getline(s, word, ',')) {
-      // For now, just scale to the interval (0,1) right here.
-      const double pixel_value = static_cast<double>(std::stoi(word)) / 255;
+      // For now, just scale to the interval (0,1) or (-1,1) right here.
+      // TODO: Determine the best way to scale/center/normalize/transform the
+      // data, possibly depending on which activation functions are being used.
+      const double pixel_value =
+          2 * static_cast<double>(std::stoi(word)) / 255 - 1;
 
       // Faster to pre-allocate and use [] than push_/emplace_back or .at()
       image[pixel_index] = pixel_value;
       ++pixel_index;
     }
-
-    // std::cerr << "Number of elements in image: " << image.size() <<
-    // std::endl; std::cin.get();
     ++num_images_read;
-    // if (num_images_read % 1000 == 0) {
-    //   std::cerr << "Loaded " << num_images_read << " images" << std::endl;
-    // }
   }
   return;
 }
@@ -720,12 +717,14 @@ void MnistTest() {
   const int input_dimension = training_images.at(0).size();
   const int output_dimension = training_labels.at(0).size();
   const int num_hidden_layers = 3;
-  const int nodes_per_hidden_layer = 100;
+  const int nodes_per_hidden_layer = 200;
   const Eigen::VectorXd input = Eigen::VectorXd::Random(input_dimension);
   NeuralNetworkParameters nn = GetRandomNeuralNetwork(
       input_dimension, output_dimension, num_hidden_layers,
-      nodes_per_hidden_layer, ActivationFunction::SIGMOID,
+      nodes_per_hidden_layer, ActivationFunction::RELU,
       ActivationFunction::SOFTMAX);
+  // nodes_per_hidden_layer, ActivationFunction::SIGMOID,
+  // ActivationFunction::SOFTMAX);
   std::cerr << "Generated initial network" << std::endl;
 
   // Training.
@@ -735,6 +734,13 @@ void MnistTest() {
 }
 
 int main() {
+  // TODO: Read http://cs231n.github.io and in particular
+  // http://cs231n.github.io/convolutional-networks/, which is a great resource
+  // on neural nets and implementation details like how to formulate a
+  // convolutional layer as one big matrix multiplication and a note on how the
+  // backward pass is also a convolution with flipped filters. It has a good
+  // explanation of the dimensionality of the input, output and filters.
+
   // RunTests();
   MnistTest();
 
