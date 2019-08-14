@@ -3,6 +3,7 @@
 #include <string>
 
 #include "nn.hpp"
+#include "conv.hpp"
 #include "training.hpp"
 
 void ComputeNetworkGradientsNumerically(
@@ -742,7 +743,8 @@ int main() {
   // explanation of the dimensionality of the input, output and filters.
 
   // RunTests();
-  MnistTest();
+  // MnistTest();
+  TestConv();
 
   return 0;
 }

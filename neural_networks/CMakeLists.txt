@@ -4,6 +4,8 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 add_library(nn
  nn.cpp
  nn.hpp
+ conv.cpp
+ conv.hpp
  training.cpp
  training.hpp)
 
