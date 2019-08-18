@@ -31,7 +31,7 @@ CTCI:
 --Sort
 ---Merge Sort
 ---Quick Sort
----(Full List: Insertion, Bubble, Selection, Merge, Quick, Radix)
+---(Full List: Insertion, Bubble, Selection, Merge, Quick, Radix, Heap(?))
 --Binary Search
 
 -Concepts:
