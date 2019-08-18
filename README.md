@@ -14,3 +14,29 @@ SVM, decision tree, Bayesian linear regression, Gaussian Process regression, Gau
 
 Optimization:
 Stochastic Gradient Descent, Mini-Batch SGD
+
+CTCI:
+-Data Structures:
+--Linked Lists
+--Trees, Tries, Graphs
+--Stacks & Queues
+--Heaps
+--Vectors, ArrayLists
+--Hash Tables
+
+-Algorithms:
+--Graph Search
+---BFS
+---DFS
+--Sort
+---Merge Sort
+---Quick Sort
+---(Full List: Insertion, Bubble, Selection, Merge, Quick, Radix)
+--Binary Search
+
+-Concepts:
+--Bit Manipulation
+--Memory (Stack vs. Heap)
+--Recursion
+--Dynamic Programming
+--Big O (Space & Time)
