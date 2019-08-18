@@ -1,5 +1,7 @@
 #include "sort.hpp"
 
+#include <limits>
+
 std::vector<int> InsertionSort(const std::vector<int>& input) {
   // Make a copy of the input so we can sort in place.
   std::vector<int> A = input;
@@ -20,9 +22,35 @@ std::vector<int> InsertionSort(const std::vector<int>& input) {
   return A;
 }
 
-void BubbleSort(const std::vector<int>& input) {}
+std::vector<int> SelectionSort(const std::vector<int>& input) {
+  // Make a copy of the input so we can sort in place.
+  std::vector<int> A = input;
 
-void SelectionSort(const std::vector<int>& input) {}
+  // The variable i indicates the boundary between sorted and unsorted portions
+  // A. Indices [i, A.size()-1] are unsorted, and [0, i-1] are sorted.
+  for (int i = 0; i < A.size(); ++i) {
+    // Find the smallest element in the unsorted portion [i, A.size()-1].
+    int min_val = std::numeric_limits<int>::max();
+    int min_ind = 0;
+    for (int j = i; j < A.size(); ++j) {
+      if (A.at(j) < min_val) {
+        min_ind = j;
+        min_val = A.at(j);
+      }
+    }
+
+    // Now we should have the index of the smallest unsorted element.
+    if (min_ind != i) {
+      int tmp = A.at(i);
+      A.at(i) = A.at(min_ind);
+      A.at(min_ind) = tmp;
+    }
+    // Increment the boundary between sorted and unsorted.
+  }
+  return A;
+}
+
+void BubbleSort(const std::vector<int>& input) {}
 
 void MergeSort(const std::vector<int>& input) {}
 

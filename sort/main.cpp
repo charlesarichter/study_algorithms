@@ -4,6 +4,14 @@
 
 #include "sort.hpp"
 
+void PrintVector(const std::string& name, const std::vector<int>& vector) {
+  std::cerr << name;
+  for (const int i : vector) {
+    std::cerr << " " << i;
+  }
+  std::cerr << std::endl;
+}
+
 int main() {
   // Parameters to generate input vector of integers.
   const int min_val = -10;  // Lowest allowable value.
@@ -18,19 +26,12 @@ int main() {
     // Generate random number.
     input.emplace_back(dist(rd));
   }
-
-  std::cerr << "Input:";
-  for (const int i : input) {
-    std::cerr << " " << i;
-  }
-  std::cerr << std::endl;
+  PrintVector("Input", input);
 
   const std::vector<int> insertion_sort_result = InsertionSort(input);
-  std::cerr << "Result:";
-  for (const int i : insertion_sort_result) {
-    std::cerr << " " << i;
-  }
-  std::cerr << std::endl;
+  PrintVector("InsertionSort", insertion_sort_result);
+  const std::vector<int> selection_sort_result = SelectionSort(input);
+  PrintVector("SelectionSort", selection_sort_result);
 
   return 0;
 }
