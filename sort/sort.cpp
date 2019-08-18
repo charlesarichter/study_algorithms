@@ -50,7 +50,28 @@ std::vector<int> SelectionSort(const std::vector<int>& input) {
   return A;
 }
 
-void BubbleSort(const std::vector<int>& input) {}
+std::vector<int> BubbleSort(const std::vector<int>& input) {
+  // Make a copy of the input so we can sort in place.
+  std::vector<int> A = input;
+
+  // Loop over the whole array until we loop and nothing changes.
+  while (true) {
+    bool changed = false;
+    for (int i = 1; i < A.size(); ++i) {
+      // If adjacent elements are out of order, swap them.
+      if (A.at(i) < A.at(i - 1)) {
+        const int tmp = A.at(i);
+        A.at(i) = A.at(i - 1);
+        A.at(i - 1) = tmp;
+        changed = true;
+      }
+    }
+    if (!changed) {
+      break;
+    }
+  }
+  return A;
+}
 
 void MergeSort(const std::vector<int>& input) {}
 

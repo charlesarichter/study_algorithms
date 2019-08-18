@@ -32,6 +32,8 @@ int main() {
   PrintVector("InsertionSort", insertion_sort_result);
   const std::vector<int> selection_sort_result = SelectionSort(input);
   PrintVector("SelectionSort", selection_sort_result);
+  const std::vector<int> bubble_sort_result = BubbleSort(input);
+  PrintVector("BubbleSort   ", bubble_sort_result);
 
   return 0;
 }
