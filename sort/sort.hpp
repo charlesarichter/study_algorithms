@@ -39,7 +39,7 @@ std::vector<int> HeapSort(const std::vector<int>& input);
 // through the array may be required.
 std::vector<int> BubbleSort(const std::vector<int>& input);
 
-// A Divide-and-Conquer approch. O(n log n) time complexity.
+// A Divide-and-Conquer approch. O(n log n) time complexity, worst and average.
 //
 // TODO: Derive time and space complexity.
 //
@@ -56,4 +56,11 @@ std::vector<int> BubbleSort(const std::vector<int>& input);
 // the output pile and repeat until you're done.
 std::vector<int> MergeSort(const std::vector<int>& input);
 
-void QuickSort(const std::vector<int>& input);
+// A Divide-and-Conquer approch. O(n log n) average case, O(n^2) worst case time
+// complexity. Note the difference with MergeSort (worst case O(n log n)).
+//
+// Similar to MergeSort, QuickSort partitions its input array into two halves
+// and calls QuickSort on the two halves. While MergeSort merges the results of
+// sorting the two halves, QuckSort uses the partition function to re-order
+// elements in place so that no explicit merging step ever happens.
+void QuickSort(std::vector<int>& input, const int lo, const int hi);

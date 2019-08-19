@@ -123,4 +123,49 @@ std::vector<int> MergeSort(const std::vector<int>& input) {
   return Merge(l_sorted, r_sorted);
 }
 
-void QuickSort(const std::vector<int>& input) {}
+static int QuickSortPartitionHoare(std::vector<int>& input, const int lo_input,
+                                   const int hi_input) {
+  // These indices start off at the boundaries of the input, and will work their
+  // way towards each other (swapping input values) until they reach the pivot.
+  int lo = lo_input;
+  int hi = hi_input;
+
+  // The pivot value is the value at the mid point of the input.
+  const int pivot = input.at(lo + (hi - lo) / 2);
+
+  while (true) {
+    // Increment lo until we reach an element that input(lo) is not less than.
+    while (input.at(lo) < pivot) {
+      ++lo;
+    }
+
+    // Decrement hi until we get to an element that input(hi) is not more than.
+    while (input.at(hi) > pivot) {
+      --hi;
+    }
+
+    // If lo and hi have crossed, or are equal, we're done. That means we have
+    // swapped all elements that need to be swapped in order for all elements
+    // left of the pivot to be less than or equal to the pivot, and all elements
+    // right of the pivot to be greater than or equal to the pivot.
+    if (lo >= hi) {
+      return hi;
+    }
+
+    // When we reach this point, lo and hi are indices of elements that are on
+    // the "wrong side" of the pivot. Swap.
+    const int tmp = input.at(hi);
+    input.at(hi) = input.at(lo);
+    input.at(lo) = tmp;
+    ++lo;
+    --hi;
+  }
+}
+
+void QuickSort(std::vector<int>& input, const int lo, const int hi) {
+  if (lo < hi) {
+    const int p = QuickSortPartitionHoare(input, lo, hi);
+    QuickSort(input, lo, p);
+    QuickSort(input, p + 1, hi);
+  }
+}
