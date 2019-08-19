@@ -39,6 +39,21 @@ std::vector<int> HeapSort(const std::vector<int>& input);
 // through the array may be required.
 std::vector<int> BubbleSort(const std::vector<int>& input);
 
+// A Divide-and-Conquer approch. O(n log n) time complexity.
+//
+// TODO: Derive time and space complexity.
+//
+// MergeSort takes its input, divides it into two sub-arrays, sorts them, and
+// re-combines them into a single sorted array. And the method it uses to sort
+// each sub-array is...itself. It's a recursive algorithm. The recursion bottoms
+// out when the sub-arrays are of size 1 and are therefore trivially sorted.
+//
+// The method it uses to combine the two sorted halves into a full sorted array
+// is an auxiliary function called Merge, which simply combines the two inputs,
+// one element at a time, knowing that they are sorted. Imagine combining two
+// sorted piles of cards into a single sorted pile of cards. You just look at
+// which card is at the top of each pile, take the smaller one and put it into
+// the output pile and repeat until you're done.
 std::vector<int> MergeSort(const std::vector<int>& input);
 
 void QuickSort(const std::vector<int>& input);
