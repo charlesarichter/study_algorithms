@@ -27,6 +27,10 @@ std::vector<int> InsertionSort(const std::vector<int>& input);
 // portion of the array. Then move the boundary one place to the right.
 std::vector<int> SelectionSort(const std::vector<int>& input);
 
+// The same as SelectionSort, only uses a heap to find the smallest element in
+// the unsorted portion of the array.
+std::vector<int> HeapSort(const std::vector<int>& input);
+
 // Very simple...not really a serious algorithm, but well known because of its
 // simplicity. In-place, O(n^2) time complexity.
 //
@@ -35,6 +39,6 @@ std::vector<int> SelectionSort(const std::vector<int>& input);
 // through the array may be required.
 std::vector<int> BubbleSort(const std::vector<int>& input);
 
-void MergeSort(const std::vector<int>& input);
+std::vector<int> MergeSort(const std::vector<int>& input);
+
 void QuickSort(const std::vector<int>& input);
-void HeapSort(const std::vector<int>& input);

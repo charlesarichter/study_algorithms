@@ -1,5 +1,6 @@
 #include "sort.hpp"
 
+#include <iostream>
 #include <limits>
 
 std::vector<int> InsertionSort(const std::vector<int>& input) {
@@ -50,6 +51,8 @@ std::vector<int> SelectionSort(const std::vector<int>& input) {
   return A;
 }
 
+std::vector<int> HeapSort(const std::vector<int>& input) {}
+
 std::vector<int> BubbleSort(const std::vector<int>& input) {
   // Make a copy of the input so we can sort in place.
   std::vector<int> A = input;
@@ -73,8 +76,79 @@ std::vector<int> BubbleSort(const std::vector<int>& input) {
   return A;
 }
 
-void MergeSort(const std::vector<int>& input) {}
+// TODO: Also implement this with the input arguments in CLRS (Intro to Algs)
+static std::vector<int> Merge(const std::vector<int>& L,
+                              const std::vector<int>& R) {
+  const int n = L.size() + R.size();
+
+  // Copy input and add "sentinel" value.
+  std::vector<int> l_sentinel = L;
+  std::vector<int> r_sentinel = R;
+  l_sentinel.emplace_back(std::numeric_limits<int>::max());
+  r_sentinel.emplace_back(std::numeric_limits<int>::max());
+
+  int l_counter = 0;
+  int r_counter = 0;
+  int values_processed = 0;
+  std::vector<int> result;  //(n);
+  while (values_processed < n) {
+    if (l_sentinel.at(l_counter) < r_sentinel.at(r_counter)) {
+      result.emplace_back(l_sentinel.at(l_counter));
+      ++l_counter;
+    } else {
+      result.emplace_back(r_sentinel.at(r_counter));
+      ++r_counter;
+    }
+    ++values_processed;
+  }
+  return result;
+}
+
+std::vector<int> MergeSort(const std::vector<int>& input) {
+  // Make a copy of the input to operate on.
+  std::vector<int> A = input;
+
+  // If the input has size 1, then it's already sorted and we can return it.
+  if (input.size() == 1) {
+    return A;
+  }
+
+  // std::cerr << "MergeSort input size: " << input.size() << std::endl;
+
+  // Divide the input in half.
+  const int n = input.size();
+  const std::vector<int> L(input.begin(), input.begin() + n / 2);
+  const std::vector<int> R(input.begin() + n / 2, input.end());
+
+  // std::cerr << "n: " << n << " n/2: " << n / 2 << std::endl;
+  // std::cerr << "L";
+  // for (const int i : L) {
+  //   std::cerr << " " << i;
+  // }
+  // std::cerr << std::endl;
+  // std::cerr << "R";
+  // for (const int i : R) {
+  //   std::cerr << " " << i;
+  // }
+  // std::cerr << std::endl;
+
+  // (Recursively) Sort the left and right halves.
+  const std::vector<int> l_sorted = MergeSort(L);
+  const std::vector<int> r_sorted = MergeSort(R);
+
+  // std::cerr << "L Sorted";
+  // for (const int i : l_sorted) {
+  //   std::cerr << " " << i;
+  // }
+  // std::cerr << std::endl;
+  // std::cerr << "R Sorted";
+  // for (const int i : r_sorted) {
+  //   std::cerr << " " << i;
+  // }
+  // std::cerr << std::endl;
+
+  // Combine the sorted halves with the Merge function.
+  return Merge(l_sorted, r_sorted);
+}
 
 void QuickSort(const std::vector<int>& input) {}
-
-void HeapSort(const std::vector<int>& input) {}
