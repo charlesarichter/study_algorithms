@@ -81,6 +81,15 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
   }
 }
 
+void ConvMatrixMultiplication(
+    const std::vector<Eigen::MatrixXd>& input_volume,
+    const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
+    const std::vector<double>& biases,
+    std::vector<Eigen::MatrixXd>* output_volume) {
+  // Copy unrolled patches if input into columns of a dense matrix.
+  // Unroll filters.
+}
+
 void TestConv() {
   // Test from example in: http://cs231n.github.io/convolutional-networks/
 

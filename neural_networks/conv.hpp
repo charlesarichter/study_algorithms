@@ -29,5 +29,29 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
           const std::vector<double>& biases,
           std::vector<Eigen::MatrixXd>* output_volume);
 
+/**
+ * Same as Conv() only implements the calculation as matrix multiplication.
+ *
+ * Helpful References on conversion between convolution/cross-correlation and
+ * matrix multiplication:
+ *
+ * -https://knet.readthedocs.io/en/latest/cnn.html
+ * -https://medium.com/@_init_/an-illustrated-explanation-of-performing-2d-convolutions-using-matrix-multiplications-1e8de8cd2544
+ *
+ * Notes:
+ * -Can copy filters into a sparse Toeplitz matrix
+ * --Downside: Sparse matrix has a lot of zeros in it
+ * --Downside: Need to constrain weights to have the same value in the various
+ * places where they appear.
+ * -Can copy input patches into a dense matrix.
+ * --According to Knet reference above, this is the typical approach for 2D
+ * images.
+ */
+void ConvMatrixMultiplication(
+    const std::vector<Eigen::MatrixXd>& input_volume,
+    const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
+    const std::vector<double>& biases,
+    std::vector<Eigen::MatrixXd>* output_volume);
+
 void TestConv();
 void TestConv2();
