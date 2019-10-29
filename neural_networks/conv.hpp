@@ -9,3 +9,4 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
           std::vector<Eigen::MatrixXd>* output_volume);
 
 void TestConv();
+void TestConv2();

@@ -744,7 +744,7 @@ int main() {
 
   // RunTests();
   // MnistTest();
-  TestConv();
+  TestConv2();
 
   return 0;
 }

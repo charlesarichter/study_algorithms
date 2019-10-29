@@ -204,3 +204,127 @@ void TestConv() {
   // Compute conv layer.
   Conv(input_volume, conv_kernels, biases, &output_volume);
 }
+
+void TestConv2() {
+  // Test from example in: http://cs231n.github.io/convolutional-networks/
+
+  // clang-format off
+
+  // Input Volume (+pad 1) (7x7x3)
+  // x[:,:,0]
+  Eigen::MatrixXd x0(7, 7);
+  x0 << 0, 0, 0, 0, 0, 0, 0,
+				0, 1, 0, 2, 1, 1, 0,
+				0, 0, 1, 2, 0, 0, 0,
+				0, 1, 2, 1, 2, 2, 0,
+				0, 0, 1, 2, 2, 0, 0,
+				0, 1, 2, 1, 0, 2, 0,
+				0, 0, 0, 0, 0, 0, 0;
+
+  // x[:,:,1]
+  Eigen::MatrixXd x1(7, 7);
+  x1 << 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 2, 1, 2, 1, 0,
+        0, 1, 0, 1, 2, 2, 0,
+        0, 0, 1, 1, 0, 2, 0,
+        0, 0, 0, 0, 2, 2, 0,
+        0, 2, 1, 1, 1, 2, 0,
+        0, 0, 0, 0, 0, 0, 0;
+
+
+  // x[:,:,2]
+  Eigen::MatrixXd x2(7, 7);
+  x2 << 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 1, 2, 0, 0, 0,
+        0, 2, 0, 0, 1, 0, 0,
+        0, 0, 1, 2, 2, 0, 0,
+        0, 0, 0, 1, 0, 0, 0,
+        0, 2, 0, 0, 1, 1, 0,
+        0, 0, 0, 0, 0, 0, 0;
+
+
+  // Filter W0 (3x3x3)
+  // w0[:,:,0]
+  Eigen::MatrixXd w00(3,3);
+  w00 <<  0,  0, -1,
+          0,  0,  0, 
+          0,  1,  0;
+
+  // w0[:,:,1],
+  Eigen::MatrixXd w01(3,3);
+  w01 <<  0,  1,  0, 
+         -1,  0,  0, 
+          1, -1, -1;
+
+  // w0[:,:,2],
+  Eigen::MatrixXd w02(3,3);
+  w02 <<  1,  0,  1, 
+          0,  1,  0, 
+          0,  1,  1;
+
+   // Bias b0 (1x1x1),
+   // b0[:,:,0],
+  // Eigen::MatrixXd b0(1,1);
+  // b0 << 1;
+  const double b0 = 1;
+
+  // Filter W1 (3x3x3),
+  // w1[:,:,0],
+  Eigen::MatrixXd w10(3,3);
+  w10 << -1,  1,  1, 
+          0,  1,  0, 
+         -1,  0, -1;
+
+  // w1[:,:,1],
+  Eigen::MatrixXd w11(3,3);
+  w11 << -1,  1,  1, 
+         -1,  0,  0, 
+          0,  0, -1;
+
+  // w1[:,:,2],
+  Eigen::MatrixXd w12(3,3);
+  w12 <<  1, -1, -1, 
+          0,  0,  1, 
+         -1, -1,  0;
+
+  // Bias b1 (1x1x1),
+  // b1[:,:,0],
+  // Eigen::MatrixXd b1(1,1);
+  // b1 << 0;
+  const double b1 = 0;
+
+  // Output Volume (3x3x2),
+  // o[:,:,0],
+  Eigen::MatrixXd o0(3,3);
+  o0 <<  3,  1, -1,
+         1,  5,  4,
+        -2, -2,  3;
+
+  // o[:,:,1],
+  Eigen::MatrixXd o1(3,3);
+  o1 << -1, -3, -2,
+         1, -1,  1,
+         2,  5, -1;
+
+  // clang-format on
+
+  // Input volume is 3-channel.
+  std::vector<Eigen::MatrixXd> input_volume{x0, x1, x2};
+
+  // Each of the N (in ths case 2) conv filters must have as many channels as
+  // the input (in this case 3).
+  //
+  // The depth of each conv filter must equal the depth of the input volume and
+  // the number of conv filters determines the depth of the output volume.
+  std::vector<std::vector<Eigen::MatrixXd>> conv_kernels{{w00, w01, w02},
+                                                         {w10, w11, w12}};
+
+  // TODO: Should biases be matrices? Will they always be 1x1?
+  std::vector<double> biases{b0, b1};
+
+  // Empty container for the output volume.
+  std::vector<Eigen::MatrixXd> output_volume;
+
+  // Compute conv layer.
+  Conv(input_volume, conv_kernels, biases, &output_volume);
+}
