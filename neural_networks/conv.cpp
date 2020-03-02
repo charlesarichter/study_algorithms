@@ -74,9 +74,10 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
       }
     }
 
-    std::cerr << "Filter Channel Sum:" << std::endl;
-    std::cerr << filter_channel_sum << std::endl;
-    std::cin.get();
+    // std::cerr << "Filter Channel Sum:" << std::endl;
+    // std::cerr << filter_channel_sum << std::endl;
+    // std::cin.get();
+    output_volume->emplace_back(filter_channel_sum);
   }
 }
 
@@ -192,6 +193,8 @@ void TestConv() {
 
   // clang-format on
 
+  const std::vector<Eigen::MatrixXd> output_volume_expected{o0, o1};
+
   // Input volume is 3-channel.
   std::vector<Eigen::MatrixXd> input_volume{x0, x1, x2};
 
@@ -214,9 +217,15 @@ void TestConv() {
 
   // Compute conv layer.
   Conv(input_volume, conv_kernels, biases, stride, &output_volume);
-  // Compute conv layer.
-  Conv(input_volume, conv_kernels, biases, stride, &output_volume);
 
+  assert(output_volume.size() == output_volume_expected.size());
+
+  for (std::size_t i = 0; i < output_volume.size(); ++i) {
+    const Eigen::MatrixXd& output_computed = output_volume.at(i);
+    const Eigen::MatrixXd& output_expected = output_volume_expected.at(i);
+    const Eigen::MatrixXd output_diff = output_expected - output_computed;
+    std::cerr << "Output difference: " << std::endl << output_diff << std::endl;
+  }
 }
 
 void TestConv2() {
@@ -322,6 +331,8 @@ void TestConv2() {
 
   // clang-format on
 
+  const std::vector<Eigen::MatrixXd> output_volume_expected{o0, o1};
+
   // Input volume is 3-channel.
   std::vector<Eigen::MatrixXd> input_volume{x0, x1, x2};
 
@@ -343,5 +354,14 @@ void TestConv2() {
   const double stride = 2;
 
   // Compute conv layer.
-  Conv(input_volume, conv_kernels, biases, &output_volume);
+  Conv(input_volume, conv_kernels, biases, stride, &output_volume);
+
+  assert(output_volume.size() == output_volume_expected.size());
+
+  for (std::size_t i = 0; i < output_volume.size(); ++i) {
+    const Eigen::MatrixXd& output_computed = output_volume.at(i);
+    const Eigen::MatrixXd& output_expected = output_volume_expected.at(i);
+    const Eigen::MatrixXd output_diff = output_expected - output_computed;
+    std::cerr << "Output difference: " << std::endl << output_diff << std::endl;
+  }
 }
