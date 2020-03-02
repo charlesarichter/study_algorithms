@@ -45,13 +45,24 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
  * places where they appear.
  * -Can copy input patches into a dense matrix.
  * --According to Knet reference above, this is the typical approach for 2D
- * images.
+ * images: "For 2-D images, typically the second approach is used: the local
+ * patches of the image used by convolution are stretched out to columns of an
+ * input matrix, an operation commonly called im2col. Each convolutional filter
+ * is stretched out to rows of a filter matrix. After the matrix multiplication
+ * the resulting array is reshaped into the proper output dimensions."
+ *
+ * ALSO (from knet): You just as you can perform convolution as matrix
+ * multiplication, you can also perform matrix multiplication as convolution,
+ * which is useful if you want to make a network layer that accepts inputs of
+ * different sizes. Normal matrix multiplication would fail, but convolution
+ * would work.
  */
 void ConvMatrixMultiplication(
     const std::vector<Eigen::MatrixXd>& input_volume,
     const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
-    const std::vector<double>& biases,
+    const std::vector<double>& biases, const int stride,
     std::vector<Eigen::MatrixXd>* output_volume);
 
 void TestConv();
 void TestConv2();
+void TestConv3knet();
