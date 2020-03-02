@@ -4,10 +4,9 @@
 
 void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
           const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
-          const std::vector<double>& biases,
+          const std::vector<double>& biases, const int stride,
           std::vector<Eigen::MatrixXd>* output_volume) {
-  // TODO: Add padding and stride as inputs to this function.
-  const size_t stride = 2;  // 1;
+  // TODO: Add padding input to this function.
 
   // Get number of channels in the input volume.
   assert(!input_volume.empty());
@@ -210,8 +209,14 @@ void TestConv() {
   // Empty container for the output volume.
   std::vector<Eigen::MatrixXd> output_volume;
 
+  // Stride of 2 for this example.
+  const double stride = 2;
+
   // Compute conv layer.
-  Conv(input_volume, conv_kernels, biases, &output_volume);
+  Conv(input_volume, conv_kernels, biases, stride, &output_volume);
+  // Compute conv layer.
+  Conv(input_volume, conv_kernels, biases, stride, &output_volume);
+
 }
 
 void TestConv2() {
@@ -333,6 +338,9 @@ void TestConv2() {
 
   // Empty container for the output volume.
   std::vector<Eigen::MatrixXd> output_volume;
+
+  // Stride of 2 for this example.
+  const double stride = 2;
 
   // Compute conv layer.
   Conv(input_volume, conv_kernels, biases, &output_volume);
