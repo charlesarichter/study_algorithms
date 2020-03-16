@@ -216,6 +216,8 @@ void ConvMatrixMultiplication(
                                       num_steps_horizontal, num_steps_vertical);
       std::cerr << "Convolution result: " << std::endl
                 << conv_result << std::endl;
+
+      output_volume->emplace_back(conv_result);
     }
   }
 }
@@ -537,6 +539,7 @@ void TestConv3knet() {
 
   // Empty container for the output volume.
   std::vector<Eigen::MatrixXd> output_volume;
+  std::vector<Eigen::MatrixXd> output_volume_mat_mult;
 
   // Stride of 1 for this example.
   const double stride = 1;
@@ -544,5 +547,15 @@ void TestConv3knet() {
   // Compute conv layer.
   Conv(input_volume, conv_kernels, biases, stride, &output_volume);
   ConvMatrixMultiplication(input_volume, conv_kernels, biases, stride,
-                           &output_volume);
+                           &output_volume_mat_mult);
+
+  std::cerr << "Size of output volume regular  " << output_volume.size()
+            << std::endl;
+  std::cerr << "Output volume regular  " << std::endl
+            << output_volume.front() << std::endl;
+
+  std::cerr << "Size of output volume mat mult "
+            << output_volume_mat_mult.size() << std::endl;
+  std::cerr << "Output volume mat mult  " << std::endl
+            << output_volume_mat_mult.front() << std::endl;
 }
