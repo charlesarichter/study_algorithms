@@ -187,10 +187,9 @@ void ConvMatrixMultiplication(
     const std::vector<Eigen::MatrixXd>& conv_kernel = conv_kernels.at(i);
 
     // For each kernel/filter, sum results down the channels, plus bias.
-    // const double bias = biases.at(i);
-    // Eigen::MatrixXd filter_channel_sum =
-    //     bias * Eigen::MatrixXd::Ones(num_steps_vertical,
-    //     num_steps_horizontal);
+    const double bias = biases.at(i);
+    Eigen::MatrixXd filter_channel_sum =
+        bias * Eigen::MatrixXd::Ones(num_steps_vertical, num_steps_horizontal);
 
     Eigen::MatrixXd input_patches_unrolled =
         Eigen::MatrixXd::Zero(num_kernel_elements_total, num_steps_total);
@@ -259,8 +258,9 @@ void ConvMatrixMultiplication(
       std::cerr << "Convolution result: " << std::endl
                 << conv_result << std::endl;
 
-      output_volume->emplace_back(conv_result);
+      filter_channel_sum += conv_result;
     }
+    output_volume->emplace_back(filter_channel_sum);
   }
 }
 
