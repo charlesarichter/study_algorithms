@@ -746,7 +746,7 @@ int main() {
   // MnistTest();
   TestConv();
   TestConv2();
-  // TestConv3knet();
+  TestConv3knet();
 
   return 0;
 }

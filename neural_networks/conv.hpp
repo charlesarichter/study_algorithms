@@ -24,10 +24,10 @@
  * The height of the output volume is: H_out = (H - F + 2P)/S + 1.
  * See http://cs231n.github.io/convolutional-networks/
  */
-void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
+void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
           const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
-          const std::vector<double>& biases, const int stride,
-          std::vector<Eigen::MatrixXd>* output_volume);
+          const std::vector<double>& biases, const int padding,
+          const int stride, std::vector<Eigen::MatrixXd>* output_volume);
 
 /**
  * Same as Conv() only implements the calculation as matrix multiplication.

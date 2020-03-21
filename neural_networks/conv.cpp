@@ -2,15 +2,35 @@
 
 #include "conv.hpp"
 
-void Conv(const std::vector<Eigen::MatrixXd>& input_volume,
+void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
           const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
-          const std::vector<double>& biases, const int stride,
-          std::vector<Eigen::MatrixXd>* output_volume) {
-  // TODO: Add padding input to this function.
-
+          const std::vector<double>& biases, const int padding,
+          const int stride, std::vector<Eigen::MatrixXd>* output_volume) {
   // Get number of channels in the input volume.
-  assert(!input_volume.empty());
-  const size_t num_channels = input_volume.size();
+  assert(!input_volume_unpadded.empty());
+  const size_t num_channels = input_volume_unpadded.size();
+
+  // Size of unpadded input.
+  const size_t input_cols_unpadded = input_volume_unpadded.front().cols();
+  const size_t input_rows_unpadded = input_volume_unpadded.front().rows();
+
+  // Size of input after padding.
+  const size_t input_cols_padded = input_cols_unpadded + 2 * padding;
+  const size_t input_rows_padded = input_rows_unpadded + 2 * padding;
+
+  // Create padded inputs.
+  std::vector<Eigen::MatrixXd> input_volume;
+  for (const Eigen::MatrixXd& input_channel_unpadded : input_volume_unpadded) {
+    // Make a matrix of the padded size.
+    Eigen::MatrixXd input_channel_padded =
+        Eigen::MatrixXd::Zero(input_rows_padded, input_cols_padded);
+
+    // Copy the unpadded input into the appropriate block of the padded input.
+    input_channel_padded.block(padding, padding, input_rows_unpadded,
+                               input_cols_unpadded) = input_channel_unpadded;
+    input_volume.emplace_back(input_channel_padded);
+  }
+
   const size_t input_cols = input_volume.front().cols();  // NOTE: Padded.
   const size_t input_rows = input_volume.front().rows();  // NOTE: Padded.
 
@@ -229,36 +249,59 @@ void TestConv() {
 
   // Input Volume (+pad 1) (7x7x3)
   // x[:,:,0]
-  Eigen::MatrixXd x0(7, 7);
-  x0 << 0, 0, 0, 0, 0, 0, 0,
-				0, 2, 2, 2, 2, 0, 0,
-				0, 1, 2, 1, 1, 1, 0,
-				0, 2, 1, 1, 1, 2, 0,
-				0, 2, 0, 2, 2, 0, 0,
-				0, 2, 0, 2, 0, 2, 0,
-				0, 0, 0, 0, 0, 0, 0;
+  // Eigen::MatrixXd x0(7, 7);
+  // x0 << 0, 0, 0, 0, 0, 0, 0,
+	// 			0, 2, 2, 2, 2, 0, 0,
+	// 			0, 1, 2, 1, 1, 1, 0,
+	// 			0, 2, 1, 1, 1, 2, 0,
+	// 			0, 2, 0, 2, 2, 0, 0,
+	// 			0, 2, 0, 2, 0, 2, 0,
+	// 			0, 0, 0, 0, 0, 0, 0;
+  //
+  // // x[:,:,1]
+  // Eigen::MatrixXd x1(7, 7);
+  // x1 << 0, 0, 0, 0, 0, 0, 0,
+  //       0, 1, 1, 0, 2, 2, 0,
+  //       0, 2, 1, 1, 0, 0, 0,
+  //       0, 0, 0, 1, 1, 0, 0,
+  //       0, 2, 0, 0, 0, 0, 0,
+  //       0, 1, 0, 0, 2, 0, 0,
+  //       0, 0, 0, 0, 0, 0, 0;
+  //
+  // // x[:,:,2]
+  // Eigen::MatrixXd x2(7, 7);
+  // x2 << 0, 0, 0, 0, 0, 0, 0,
+  //       0, 0, 2, 0, 1, 2, 0,
+  //       0, 2, 1, 1, 2, 1, 0,
+  //       0, 0, 2, 1, 0, 2, 0,
+  //       0, 2, 2, 2, 1, 0, 0,
+  //       0, 2, 2, 2, 2, 0, 0,
+  //       0, 0, 0, 0, 0, 0, 0;
+
+  // Input volume without padding (to be added in the Conv function).
+  // x[:,:,0]
+  Eigen::MatrixXd x0(5, 5);
+	x0 << 2, 2, 2, 2, 0,
+				1, 2, 1, 1, 1,
+				2, 1, 1, 1, 2,
+				2, 0, 2, 2, 0,
+				2, 0, 2, 0, 2;
 
   // x[:,:,1]
-  Eigen::MatrixXd x1(7, 7);
-  x1 << 0, 0, 0, 0, 0, 0, 0,
-        0, 1, 1, 0, 2, 2, 0,
-        0, 2, 1, 1, 0, 0, 0,
-        0, 0, 0, 1, 1, 0, 0,
-        0, 2, 0, 0, 0, 0, 0,
-        0, 1, 0, 0, 2, 0, 0,
-        0, 0, 0, 0, 0, 0, 0;
-
+  Eigen::MatrixXd x1(5, 5);
+  x1 << 1, 1, 0, 2, 2,
+        2, 1, 1, 0, 0,
+        0, 0, 1, 1, 0,
+        2, 0, 0, 0, 0,
+        1, 0, 0, 2, 0;
 
   // x[:,:,2]
-  Eigen::MatrixXd x2(7, 7);
-  x2 << 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 2, 0, 1, 2, 0,
-        0, 2, 1, 1, 2, 1, 0,
-        0, 0, 2, 1, 0, 2, 0,
-        0, 2, 2, 2, 1, 0, 0,
-        0, 2, 2, 2, 2, 0, 0,
-        0, 0, 0, 0, 0, 0, 0;
-
+  Eigen::MatrixXd x2(5, 5);
+  x2 << 0, 2, 0, 1, 2,
+        2, 1, 1, 2, 1,
+        0, 2, 1, 0, 2,
+        2, 2, 2, 1, 0,
+        2, 2, 2, 2, 0;
 
   // Filter W0 (3x3x3)
   // w0[:,:,0]
@@ -344,11 +387,14 @@ void TestConv() {
   // Empty container for the output volume.
   std::vector<Eigen::MatrixXd> output_volume;
 
+  // Padding of 1 for this example.
+  const int padding = 1;
+
   // Stride of 2 for this example.
-  const double stride = 2;
+  const int stride = 2;
 
   // Compute conv layer.
-  Conv(input_volume, conv_kernels, biases, stride, &output_volume);
+  Conv(input_volume, conv_kernels, biases, padding, stride, &output_volume);
 
   assert(output_volume.size() == output_volume_expected.size());
 
@@ -367,36 +413,59 @@ void TestConv2() {
 
   // Input Volume (+pad 1) (7x7x3)
   // x[:,:,0]
-  Eigen::MatrixXd x0(7, 7);
-  x0 << 0, 0, 0, 0, 0, 0, 0,
-				0, 1, 2, 2, 0, 1, 0,
-				0, 0, 0, 2, 2, 0, 0,
-				0, 0, 1, 1, 2, 2, 0,
-				0, 1, 1, 2, 1, 1, 0,
-				0, 0, 0, 2, 2, 1, 0,
-				0, 0, 0, 0, 0, 0, 0;
+  // Eigen::MatrixXd x0(7, 7);
+  // x0 << 0, 0, 0, 0, 0, 0, 0,
+	// 			0, 1, 2, 2, 0, 1, 0,
+	// 			0, 0, 0, 2, 2, 0, 0,
+	// 			0, 0, 1, 1, 2, 2, 0,
+	// 			0, 1, 1, 2, 1, 1, 0,
+	// 			0, 0, 0, 2, 2, 1, 0,
+	// 			0, 0, 0, 0, 0, 0, 0;
+  //
+  // // x[:,:,1]
+  // Eigen::MatrixXd x1(7, 7);
+  // x1 << 0, 0, 0, 0, 0, 0, 0,
+  //       0, 2, 0, 2, 0, 1, 0,
+  //       0, 2, 2, 2, 2, 2, 0,
+  //       0, 1, 2, 2, 1, 1, 0,
+  //       0, 1, 0, 1, 1, 1, 0,
+  //       0, 2, 0, 1, 2, 0, 0,
+  //       0, 0, 0, 0, 0, 0, 0;
+  //
+  // // x[:,:,2]
+  // Eigen::MatrixXd x2(7, 7);
+  // x2 << 0, 0, 0, 0, 0, 0, 0,
+  //       0, 2, 2, 0, 2, 2, 0,
+  //       0, 0, 1, 2, 1, 1, 0,
+  //       0, 2, 2, 1, 1, 0, 0,
+  //       0, 0, 1, 0, 2, 2, 0,
+  //       0, 2, 1, 2, 0, 1, 0,
+  //       0, 0, 0, 0, 0, 0, 0;
+
+  // Input volume without padding (to be added in the Conv function).
+  // x[:,:,0]
+  Eigen::MatrixXd x0(5, 5);
+  x0 << 1, 2, 2, 0, 1,
+				0, 0, 2, 2, 0,
+				0, 1, 1, 2, 2,
+				1, 1, 2, 1, 1,
+				0, 0, 2, 2, 1;
 
   // x[:,:,1]
-  Eigen::MatrixXd x1(7, 7);
-  x1 << 0, 0, 0, 0, 0, 0, 0,
-        0, 2, 0, 2, 0, 1, 0,
-        0, 2, 2, 2, 2, 2, 0,
-        0, 1, 2, 2, 1, 1, 0,
-        0, 1, 0, 1, 1, 1, 0,
-        0, 2, 0, 1, 2, 0, 0,
-        0, 0, 0, 0, 0, 0, 0;
-
+  Eigen::MatrixXd x1(5, 5);
+  x1 << 2, 0, 2, 0, 1,
+        2, 2, 2, 2, 2,
+        1, 2, 2, 1, 1,
+        1, 0, 1, 1, 1,
+        2, 0, 1, 2, 0;
 
   // x[:,:,2]
-  Eigen::MatrixXd x2(7, 7);
-  x2 << 0, 0, 0, 0, 0, 0, 0,
-        0, 2, 2, 0, 2, 2, 0,
-        0, 0, 1, 2, 1, 1, 0,
-        0, 2, 2, 1, 1, 0, 0,
-        0, 0, 1, 0, 2, 2, 0,
-        0, 2, 1, 2, 0, 1, 0,
-        0, 0, 0, 0, 0, 0, 0;
-
+  Eigen::MatrixXd x2(5, 5);
+  x2 << 2, 2, 0, 2, 2,
+        0, 1, 2, 1, 1,
+        2, 2, 1, 1, 0,
+        0, 1, 0, 2, 2,
+        2, 1, 2, 0, 1;
 
   // Filter W0 (3x3x3)
   // w0[:,:,0]
@@ -482,11 +551,14 @@ void TestConv2() {
   // Empty container for the output volume.
   std::vector<Eigen::MatrixXd> output_volume;
 
+  // Padding of 1 for this example.
+  const int padding = 1;
+
   // Stride of 2 for this example.
   const double stride = 2;
 
   // Compute conv layer.
-  Conv(input_volume, conv_kernels, biases, stride, &output_volume);
+  Conv(input_volume, conv_kernels, biases, padding, stride, &output_volume);
 
   assert(output_volume.size() == output_volume_expected.size());
 
@@ -541,11 +613,14 @@ void TestConv3knet() {
   std::vector<Eigen::MatrixXd> output_volume;
   std::vector<Eigen::MatrixXd> output_volume_mat_mult;
 
+  // Padding of 0 for this example.
+  const int padding = 0;
+
   // Stride of 1 for this example.
   const double stride = 1;
 
   // Compute conv layer.
-  Conv(input_volume, conv_kernels, biases, stride, &output_volume);
+  Conv(input_volume, conv_kernels, biases, padding, stride, &output_volume);
   ConvMatrixMultiplication(input_volume, conv_kernels, biases, stride,
                            &output_volume_mat_mult);
 
