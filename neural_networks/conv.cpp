@@ -152,11 +152,11 @@ void ConvMatrixMultiplication(
   const size_t num_steps_total = num_steps_horizontal * num_steps_vertical;
   const size_t num_kernel_elements_total = kernel_cols * kernel_rows;
 
-  std::cerr << "Num steps horizontal: " << num_steps_horizontal << std::endl;
-  std::cerr << "Num steps vertical: " << num_steps_vertical << std::endl;
-  std::cerr << "Num steps total: " << num_steps_total << std::endl;
-  std::cerr << "Num kernel elements total: " << num_kernel_elements_total
-            << std::endl;
+  // std::cerr << "Num steps horizontal: " << num_steps_horizontal << std::endl;
+  // std::cerr << "Num steps vertical: " << num_steps_vertical << std::endl;
+  // std::cerr << "Num steps total: " << num_steps_total << std::endl;
+  // std::cerr << "Num kernel elements total: " << num_kernel_elements_total
+  //           << std::endl;
 
   // // Copy unrolled patches of input into columns of a dense matrix.
   // // Unroll filters.
@@ -208,8 +208,8 @@ void ConvMatrixMultiplication(
       Eigen::MatrixXd kernel_channel_non_const = kernel_channel;
       const Eigen::Map<Eigen::VectorXd> kernel_unrolled(
           kernel_channel_non_const.data(), kernel_channel_non_const.size());
-      std::cerr << "Kernel unrolled: " << std::endl
-                << kernel_unrolled << std::endl;
+      // std::cerr << "Kernel unrolled: " << std::endl
+      //           << kernel_unrolled << std::endl;
 
       // TODO: Invert the order of some of these loops so that we build
       // input_patches_unrolled once and we can use it for multiple kernels.
@@ -244,19 +244,19 @@ void ConvMatrixMultiplication(
         }
       }
 
-      std::cerr << "input patches unrolled: " << std::endl
-                << input_patches_unrolled << std::endl;
+      // std::cerr << "input patches unrolled: " << std::endl
+      //           << input_patches_unrolled << std::endl;
 
       Eigen::VectorXd conv_result_unrolled =
           kernel_unrolled.transpose() * input_patches_unrolled;
-      std::cerr << "Convolution result unrolled: " << std::endl
-                << conv_result_unrolled << std::endl;
+      // std::cerr << "Convolution result unrolled: " << std::endl
+      //           << conv_result_unrolled << std::endl;
 
       const Eigen::MatrixXd conv_result =
           Eigen::Map<Eigen::MatrixXd>(conv_result_unrolled.data(),
                                       num_steps_horizontal, num_steps_vertical);
-      std::cerr << "Convolution result: " << std::endl
-                << conv_result << std::endl;
+      // std::cerr << "Convolution result: " << std::endl
+      //           << conv_result << std::endl;
 
       filter_channel_sum += conv_result;
     }
