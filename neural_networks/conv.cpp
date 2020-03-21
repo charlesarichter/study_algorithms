@@ -408,6 +408,7 @@ void TestConv() {
 
   // Empty container for the output volume.
   std::vector<Eigen::MatrixXd> output_volume;
+  std::vector<Eigen::MatrixXd> output_volume_mat_mult;
 
   // Padding of 1 for this example.
   const int padding = 1;
@@ -417,14 +418,24 @@ void TestConv() {
 
   // Compute conv layer.
   Conv(input_volume, conv_kernels, biases, padding, stride, &output_volume);
+  ConvMatrixMultiplication(input_volume, conv_kernels, biases, padding, stride,
+                           &output_volume_mat_mult);
 
   assert(output_volume.size() == output_volume_expected.size());
+  assert(output_volume_mat_mult.size() == output_volume_expected.size());
 
   for (std::size_t i = 0; i < output_volume.size(); ++i) {
-    const Eigen::MatrixXd& output_computed = output_volume.at(i);
     const Eigen::MatrixXd& output_expected = output_volume_expected.at(i);
-    const Eigen::MatrixXd output_diff = output_expected - output_computed;
+    const Eigen::MatrixXd& output_computed = output_volume.at(i);
+    const Eigen::MatrixXd output_diff = output_expected - output_volume.at(i);
     std::cerr << "Output difference: " << std::endl << output_diff << std::endl;
+
+    const Eigen::MatrixXd& output_computed_mat_mult =
+        output_volume_mat_mult.at(i);
+    const Eigen::MatrixXd output_diff_mat_mult =
+        output_expected - output_volume_mat_mult.at(i);
+    std::cerr << "Output difference matrix multiplication: " << std::endl
+              << output_diff_mat_mult << std::endl;
   }
 }
 
@@ -572,6 +583,7 @@ void TestConv2() {
 
   // Empty container for the output volume.
   std::vector<Eigen::MatrixXd> output_volume;
+  std::vector<Eigen::MatrixXd> output_volume_mat_mult;
 
   // Padding of 1 for this example.
   const int padding = 1;
@@ -581,14 +593,24 @@ void TestConv2() {
 
   // Compute conv layer.
   Conv(input_volume, conv_kernels, biases, padding, stride, &output_volume);
+  ConvMatrixMultiplication(input_volume, conv_kernels, biases, padding, stride,
+                           &output_volume_mat_mult);
 
   assert(output_volume.size() == output_volume_expected.size());
+  assert(output_volume_mat_mult.size() == output_volume_expected.size());
 
   for (std::size_t i = 0; i < output_volume.size(); ++i) {
-    const Eigen::MatrixXd& output_computed = output_volume.at(i);
     const Eigen::MatrixXd& output_expected = output_volume_expected.at(i);
-    const Eigen::MatrixXd output_diff = output_expected - output_computed;
+    const Eigen::MatrixXd& output_computed = output_volume.at(i);
+    const Eigen::MatrixXd output_diff = output_expected - output_volume.at(i);
     std::cerr << "Output difference: " << std::endl << output_diff << std::endl;
+
+    const Eigen::MatrixXd& output_computed_mat_mult =
+        output_volume_mat_mult.at(i);
+    const Eigen::MatrixXd output_diff_mat_mult =
+        output_expected - output_volume_mat_mult.at(i);
+    std::cerr << "Output difference matrix multiplication: " << std::endl
+              << output_diff_mat_mult << std::endl;
   }
 }
 
