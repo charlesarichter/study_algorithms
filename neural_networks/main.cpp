@@ -2,8 +2,8 @@
 #include <iostream>
 #include <string>
 
-#include "nn.hpp"
 #include "conv.hpp"
+#include "nn.hpp"
 #include "training.hpp"
 
 void ComputeNetworkGradientsNumerically(
@@ -744,9 +744,7 @@ int main() {
 
   // RunTests();
   // MnistTest();
-  TestConv();
-  TestConv2();
-  TestConv3knet();
+  RunConvTests();
 
   return 0;
 }

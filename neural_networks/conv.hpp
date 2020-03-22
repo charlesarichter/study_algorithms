@@ -3,6 +3,8 @@
 #include <eigen3/Eigen/Dense>
 #include <vector>
 
+#include "conv_example.hpp"
+
 /**
  * Input volume dimensions: Width (W) x Height (H) x Depth (D)
  *
@@ -63,6 +65,5 @@ void ConvMatrixMultiplication(
     const std::vector<double>& biases, const int padding, const int stride,
     std::vector<Eigen::MatrixXd>* output_volume);
 
-void TestConv();
-void TestConv2();
-void TestConv3knet();
+void RunConvTests();
+void TestConv(const ConvExample& conv_example);
