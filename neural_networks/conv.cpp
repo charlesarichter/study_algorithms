@@ -301,6 +301,48 @@ void TestConv(const ConvExample& conv_example) {
   }
 }
 
+void TestConvGradient(const ConvExample& conv_example) {
+  const std::vector<Eigen::MatrixXd>& output_volume_expected =
+      conv_example.output_volume;
+  const std::vector<Eigen::MatrixXd>& input_volume = conv_example.input_volume;
+  const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels =
+      conv_example.conv_kernels;
+  const std::vector<double>& biases = conv_example.biases;
+  const int padding = conv_example.padding;
+  const int stride = conv_example.stride;
+
+  // Compute nominal output.
+  std::vector<Eigen::MatrixXd> output_volume;
+  ConvMatrixMultiplication(input_volume, conv_kernels, biases, padding, stride,
+                           &output_volume);
+
+  const double delta = 1e-6;
+
+  // Loop over kernels.
+  for (std::size_t i = 0; i < conv_kernels.size(); ++i) {
+    // Loop over channels of each kernel.
+    for (std::size_t j = 0; j < conv_kernels.at(i).size(); ++j) {
+      // Loop over parameters of each channel of each kernel.
+      for (std::size_t k = 0; k < conv_kernels.at(i).at(j).rows(); ++k) {
+        for (std::size_t l = 0; l < conv_kernels.at(i).at(j).cols(); ++l) {
+          // Copy the nominal kernels.
+          std::vector<std::vector<Eigen::MatrixXd>> conv_kernels_plus =
+              conv_kernels;
+
+          // Add delta perturbation to specific parameter.
+          conv_kernels_plus.at(i).at(j)(k, l) += delta;
+
+          // Evaluate output with perturbed kernel.
+          std::vector<Eigen::MatrixXd> output_volume_plus;
+          ConvMatrixMultiplication(input_volume, conv_kernels_plus, biases,
+                                   padding, stride, &output_volume_plus);
+          std::cerr << i << " " << j << std::endl;
+        }
+      }
+    }
+  }
+}
+
 void RunConvTests() {
   const ConvExample conv_example_1 = GetConvExample1();
   TestConv(conv_example_1);
@@ -308,4 +350,9 @@ void RunConvTests() {
   TestConv(conv_example_2);
   const ConvExample conv_example_3 = GetConvExample3();
   TestConv(conv_example_3);
+}
+
+void RunConvGradientTests() {
+  const ConvExample conv_example_1 = GetConvExample1();
+  TestConvGradient(conv_example_1);
 }

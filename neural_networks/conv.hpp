@@ -66,4 +66,6 @@ void ConvMatrixMultiplication(
     std::vector<Eigen::MatrixXd>* output_volume);
 
 void RunConvTests();
+void RunConvGradientTests();
 void TestConv(const ConvExample& conv_example);
+void TestConvGradient(const ConvExample& conv_example);
