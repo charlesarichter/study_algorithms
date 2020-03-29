@@ -152,37 +152,7 @@ void ConvMatrixMultiplication(
   const size_t num_steps_total = num_steps_horizontal * num_steps_vertical;
   const size_t num_kernel_elements_total = kernel_cols * kernel_rows;
 
-  // std::cerr << "Num steps horizontal: " << num_steps_horizontal << std::endl;
-  // std::cerr << "Num steps vertical: " << num_steps_vertical << std::endl;
-  // std::cerr << "Num steps total: " << num_steps_total << std::endl;
-  // std::cerr << "Num kernel elements total: " << num_kernel_elements_total
-  //           << std::endl;
-
-  // // Copy unrolled patches of input into columns of a dense matrix.
-  // // Unroll filters.
-  //
-  // for (const auto& i_mat : input_volume) {
-  //   Eigen::MatrixXd i_non_const = i_mat;
-  //   std::cerr << "Input channel:" << std::endl;
-  //   std::cerr << i_non_const << std::endl;
-  //   const Eigen::Map<Eigen::RowVectorXd> i_map(i_non_const.data(),
-  //                                              i_non_const.size());
-  //   std::cerr << "Input unrolled:" << std::endl;
-  //   std::cerr << i_map << std::endl;
-  // }
-  //
-  // for (const auto& k_vec : conv_kernels) {
-  //   for (const auto& k : k_vec) {
-  //     Eigen::MatrixXd k_non_const = k;
-  //     std::cerr << "Kernel:" << std::endl;
-  //     std::cerr << k_non_const << std::endl;
-  //     const Eigen::Map<Eigen::RowVectorXd> k_map(k_non_const.data(),
-  //                                                k_non_const.size());
-  //     std::cerr << "Kernel unrolled:" << std::endl;
-  //     std::cerr << k_map << std::endl;
-  //   }
-  // }
-
+  // Compute convolution layer.
   for (size_t i = 0; i < conv_kernels.size(); ++i) {
     const std::vector<Eigen::MatrixXd>& conv_kernel = conv_kernels.at(i);
 
@@ -190,7 +160,6 @@ void ConvMatrixMultiplication(
     const double bias = biases.at(i);
     Eigen::MatrixXd filter_channel_sum =
         bias * Eigen::MatrixXd::Ones(num_steps_vertical, num_steps_horizontal);
-
     Eigen::MatrixXd input_patches_unrolled =
         Eigen::MatrixXd::Zero(num_kernel_elements_total, num_steps_total);
 
@@ -201,15 +170,10 @@ void ConvMatrixMultiplication(
       const Eigen::MatrixXd& input_channel = input_volume.at(j);
       const Eigen::MatrixXd& kernel_channel = conv_kernel.at(j);
 
-      // std::cerr << "Kernel channel:" << std::endl
-      //           << kernel_channel << std::endl;
-
       // TODO: Improve this. Using non-const so that we can call .data().
       Eigen::MatrixXd kernel_channel_non_const = kernel_channel;
       const Eigen::Map<Eigen::VectorXd> kernel_unrolled(
           kernel_channel_non_const.data(), kernel_channel_non_const.size());
-      // std::cerr << "Kernel unrolled: " << std::endl
-      //           << kernel_unrolled << std::endl;
 
       // TODO: Invert the order of some of these loops so that we build
       // input_patches_unrolled once and we can use it for multiple kernels.
@@ -231,33 +195,18 @@ void ConvMatrixMultiplication(
           const Eigen::Map<Eigen::VectorXd> input_region_vec(
               input_region.data(), input_region.size());
 
-          // std::cerr << "input region vec: " << std::endl
-          //           << input_region_vec << std::endl;
-          // std::cerr << "input patch: " << input_patch << std::endl;
-
           input_patches_unrolled.col(input_patch) << input_region_vec;
-          // std::cerr << "input patches unrolled: " << std::endl
-          //           << input_patches_unrolled << std::endl;
 
           // TODO: Compute this from k and l rather than incrementing.
           ++input_patch;
         }
       }
 
-      // std::cerr << "input patches unrolled: " << std::endl
-      //           << input_patches_unrolled << std::endl;
-
       Eigen::VectorXd conv_result_unrolled =
           kernel_unrolled.transpose() * input_patches_unrolled;
-      // std::cerr << "Convolution result unrolled: " << std::endl
-      //           << conv_result_unrolled << std::endl;
-
       const Eigen::MatrixXd conv_result =
           Eigen::Map<Eigen::MatrixXd>(conv_result_unrolled.data(),
                                       num_steps_horizontal, num_steps_vertical);
-      // std::cerr << "Convolution result: " << std::endl
-      //           << conv_result << std::endl;
-
       filter_channel_sum += conv_result;
     }
     output_volume->emplace_back(filter_channel_sum);
