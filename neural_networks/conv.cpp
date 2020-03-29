@@ -152,6 +152,30 @@ void ConvMatrixMultiplication(
   const size_t num_steps_total = num_steps_horizontal * num_steps_vertical;
   const size_t num_kernel_elements_total = kernel_cols * kernel_rows;
 
+  // Convert input channels to their "unrolled" form so that each column of each
+  // channel represents the set of elements that will be multiplied by the
+  // kernel placed in a certain location.
+  std::vector<Eigen::MatrixXd> input_channels_unrolled;
+  for (size_t j = 0; j < num_channels; ++j) {
+    const Eigen::MatrixXd& input_channel = input_volume.at(j);
+    Eigen::MatrixXd input_channel_unrolled =
+        Eigen::MatrixXd::Zero(num_kernel_elements_total, num_steps_total);
+    for (size_t k = 0; k < num_steps_horizontal; ++k) {
+      const size_t min_ind_col = k * stride;
+      for (size_t l = 0; l < num_steps_vertical; ++l) {
+        const size_t min_ind_row = l * stride;
+
+        // Extract sub-matrix we want to multiply.
+        Eigen::MatrixXd input_region = input_channel.block(
+            min_ind_row, min_ind_col, kernel_rows, kernel_cols);
+        const std::size_t ind = l + k * num_steps_vertical;  // 0, 1, 2, 3,...
+        input_channel_unrolled.col(ind) = Eigen::Map<Eigen::VectorXd>(
+            input_region.data(), input_region.size());
+      }
+    }
+    input_channels_unrolled.emplace_back(input_channel_unrolled);
+  }
+
   // Compute convolution layer.
   for (size_t i = 0; i < conv_kernels.size(); ++i) {
     const std::vector<Eigen::MatrixXd>& conv_kernel = conv_kernels.at(i);
@@ -160,50 +184,22 @@ void ConvMatrixMultiplication(
     const double bias = biases.at(i);
     Eigen::MatrixXd filter_channel_sum =
         bias * Eigen::MatrixXd::Ones(num_steps_vertical, num_steps_horizontal);
-    Eigen::MatrixXd input_patches_unrolled =
-        Eigen::MatrixXd::Zero(num_kernel_elements_total, num_steps_total);
 
     // Loop over channels of the input volume and filter. The depth (number of
     // channels) of the input volume must equal the depth (number of channels)
     // of each filter.
     for (size_t j = 0; j < conv_kernel.size(); ++j) {
-      const Eigen::MatrixXd& input_channel = input_volume.at(j);
       const Eigen::MatrixXd& kernel_channel = conv_kernel.at(j);
+      const Eigen::MatrixXd& input_channel_unrolled =
+          input_channels_unrolled.at(j);
 
       // TODO: Improve this. Using non-const so that we can call .data().
       Eigen::MatrixXd kernel_channel_non_const = kernel_channel;
       const Eigen::Map<Eigen::VectorXd> kernel_unrolled(
           kernel_channel_non_const.data(), kernel_channel_non_const.size());
 
-      // TODO: Invert the order of some of these loops so that we build
-      // input_patches_unrolled once and we can use it for multiple kernels.
-      // First determine the size and number of input patches (must be same for
-      // all kernels). Then build input_patches_unrolled. Then loop over kernels
-      // and apply them. The loop structure as-is will build the same
-      // input_patches_unrolled for each kernel.
-      std::size_t input_patch = 0;
-      for (size_t k = 0; k < num_steps_horizontal; ++k) {
-        const size_t min_ind_col = k * stride;
-        for (size_t l = 0; l < num_steps_vertical; ++l) {
-          const size_t min_ind_row = l * stride;
-
-          // Extract sub-matrix we want to multiply.
-          Eigen::MatrixXd input_region = input_channel.block(
-              min_ind_row, min_ind_col, kernel_rows, kernel_cols);
-
-          // Reshape this sub-matrix into a vector.
-          const Eigen::Map<Eigen::VectorXd> input_region_vec(
-              input_region.data(), input_region.size());
-
-          input_patches_unrolled.col(input_patch) << input_region_vec;
-
-          // TODO: Compute this from k and l rather than incrementing.
-          ++input_patch;
-        }
-      }
-
       Eigen::VectorXd conv_result_unrolled =
-          kernel_unrolled.transpose() * input_patches_unrolled;
+          kernel_unrolled.transpose() * input_channel_unrolled;
       const Eigen::MatrixXd conv_result =
           Eigen::Map<Eigen::MatrixXd>(conv_result_unrolled.data(),
                                       num_steps_horizontal, num_steps_vertical);
