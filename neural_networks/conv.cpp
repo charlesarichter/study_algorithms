@@ -343,6 +343,48 @@ void TestConvGradient(const ConvExample& conv_example) {
   }
 }
 
+void TestConvKernels(const ConvExample& conv_example) {
+  // Construct ConvKernels using vector of vector of matrices.
+  const ConvKernels ck(conv_example.conv_kernels);
+
+  // Unpack weights and dimensions.
+  const std::vector<double> weights = ck.GetWeights();
+  const std::size_t num_kernels = ck.GetNumKernels();
+  const std::size_t num_channels = ck.GetNumChannels();
+  const std::size_t num_rows = ck.GetNumRows();
+  const std::size_t num_cols = ck.GetNumCols();
+
+  // Construct ConvKernels using weights and dimensions.
+  const ConvKernels ck_from_weights(weights, num_kernels, num_channels,
+                                    num_rows, num_cols);
+
+  // Get kernels and make sure they are equal to the original.
+  const std::vector<std::vector<Eigen::MatrixXd>>& kernels_original =
+      ck.GetKernels();
+  const std::vector<std::vector<Eigen::MatrixXd>>& kernels_reconstructed =
+      ck_from_weights.GetKernels();
+
+  assert(kernels_original.size() == kernels_reconstructed.size());
+  for (std::size_t i = 0; i < kernels_original.size(); ++i) {
+    const std::vector<Eigen::MatrixXd>& kernel_original =
+        kernels_original.at(i);
+    const std::vector<Eigen::MatrixXd>& kernel_reconstructed =
+        kernels_reconstructed.at(i);
+    assert(kernel_original.size() == kernel_reconstructed.size());
+    for (std::size_t j = 0; j < kernel_original.size(); ++j) {
+      const Eigen::MatrixXd& channel_original = kernel_original.at(j);
+      const Eigen::MatrixXd& channel_reconstructed = kernel_reconstructed.at(j);
+      assert(channel_original.rows() == channel_reconstructed.rows());
+      assert(channel_original.cols() == channel_reconstructed.cols());
+
+      // Confirm equality.
+      const Eigen::MatrixXd channel_difference =
+          channel_original - channel_reconstructed;
+      assert(channel_difference.cwiseAbs().maxCoeff() < 1e-6);
+    }
+  }
+}
+
 void RunConvTests() {
   const ConvExample conv_example_1 = GetConvExample1();
   TestConv(conv_example_1);
@@ -355,4 +397,9 @@ void RunConvTests() {
 void RunConvGradientTests() {
   const ConvExample conv_example_1 = GetConvExample1();
   TestConvGradient(conv_example_1);
+}
+
+void RunConvKernelTests() {
+  const ConvExample conv_example_1 = GetConvExample1();
+  TestConvKernels(conv_example_1);
 }

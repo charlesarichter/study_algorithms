@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "conv_example.hpp"
+#include "conv_structs.hpp"
 
 /**
  * Input volume dimensions: Width (W) x Height (H) x Depth (D)
@@ -67,5 +68,7 @@ void ConvMatrixMultiplication(
 
 void RunConvTests();
 void RunConvGradientTests();
+void RunConvKernelTests();
 void TestConv(const ConvExample& conv_example);
 void TestConvGradient(const ConvExample& conv_example);
+void TestConvKernels(const ConvExample& conv_example);
