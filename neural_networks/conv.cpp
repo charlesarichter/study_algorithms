@@ -176,30 +176,43 @@ void ConvMatrixMultiplication(
     input_channels_unrolled.emplace_back(input_channel_unrolled);
   }
 
+  // Convert kernels to their unrolled form.
+  std::vector<std::vector<Eigen::VectorXd>> conv_kernels_unrolled;
+  for (size_t i = 0; i < conv_kernels.size(); ++i) {
+    std::vector<Eigen::VectorXd> conv_kernel_unrolled;
+    const std::vector<Eigen::MatrixXd>& conv_kernel = conv_kernels.at(i);
+    for (size_t j = 0; j < conv_kernel.size(); ++j) {
+      const Eigen::MatrixXd& kernel_channel = conv_kernel.at(j);
+      conv_kernel_unrolled.emplace_back(Eigen::Map<const Eigen::VectorXd>(
+          kernel_channel.data(), kernel_channel.size()));
+    }
+    conv_kernels_unrolled.emplace_back(conv_kernel_unrolled);
+  }
+
   // Compute convolution layer.
   for (size_t i = 0; i < conv_kernels.size(); ++i) {
-    const std::vector<Eigen::MatrixXd>& conv_kernel = conv_kernels.at(i);
-
     // For each kernel/filter, sum results down the channels, plus bias.
     const double bias = biases.at(i);
     Eigen::MatrixXd filter_channel_sum =
         bias * Eigen::MatrixXd::Ones(num_steps_vertical, num_steps_horizontal);
 
+    const std::vector<Eigen::VectorXd>& conv_kernel_unrolled =
+        conv_kernels_unrolled.at(i);
+
     // Loop over channels of the input volume and filter. The depth (number of
     // channels) of the input volume must equal the depth (number of channels)
     // of each filter.
-    for (size_t j = 0; j < conv_kernel.size(); ++j) {
-      const Eigen::MatrixXd& kernel_channel = conv_kernel.at(j);
+    for (size_t j = 0; j < num_channels; ++j) {
+      const Eigen::VectorXd& conv_kernel_channel_unrolled =
+          conv_kernel_unrolled.at(j);
       const Eigen::MatrixXd& input_channel_unrolled =
           input_channels_unrolled.at(j);
 
-      // TODO: Improve this. Using non-const so that we can call .data().
-      Eigen::MatrixXd kernel_channel_non_const = kernel_channel;
-      const Eigen::Map<Eigen::VectorXd> kernel_unrolled(
-          kernel_channel_non_const.data(), kernel_channel_non_const.size());
-
+      // Here is the actual multiplication between kernel and input values.
       Eigen::VectorXd conv_result_unrolled =
-          kernel_unrolled.transpose() * input_channel_unrolled;
+          conv_kernel_channel_unrolled.transpose() * input_channel_unrolled;
+
+      // Reshape into the dimensions of the filter channel sum.
       const Eigen::MatrixXd conv_result =
           Eigen::Map<Eigen::MatrixXd>(conv_result_unrolled.data(),
                                       num_steps_horizontal, num_steps_vertical);
