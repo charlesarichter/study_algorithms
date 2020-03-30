@@ -273,31 +273,47 @@ void TestConvGradient(const ConvExample& conv_example) {
   std::vector<Eigen::MatrixXd> output_volume;
   ConvMatrixMultiplication(input_volume, conv_kernels, biases, padding, stride,
                            &output_volume);
+  const std::vector<double> output_values =
+      InputOutputVolume(output_volume).GetValues();
+  const Eigen::VectorXd output_values_vec = Eigen::Map<const Eigen::VectorXd>(
+      output_values.data(), output_values.size());
 
+  // Perturbation magnitude.
   const double delta = 1e-6;
 
-  // Loop over kernels.
-  for (std::size_t i = 0; i < conv_kernels.size(); ++i) {
-    // Loop over channels of each kernel.
-    for (std::size_t j = 0; j < conv_kernels.at(i).size(); ++j) {
-      // Loop over parameters of each channel of each kernel.
-      for (std::size_t k = 0; k < conv_kernels.at(i).at(j).rows(); ++k) {
-        for (std::size_t l = 0; l < conv_kernels.at(i).at(j).cols(); ++l) {
-          // Copy the nominal kernels.
-          std::vector<std::vector<Eigen::MatrixXd>> conv_kernels_plus =
-              conv_kernels;
+  // Nominal kernel weights.
+  const ConvKernels conv_kernels_original(conv_kernels);
+  const std::vector<double>& weights = conv_kernels_original.GetWeights();
+  const std::size_t num_weights = weights.size();
+  const std::size_t num_kernels = conv_kernels_original.GetNumKernels();
+  const std::size_t num_channels = conv_kernels_original.GetNumChannels();
+  const std::size_t num_rows = conv_kernels_original.GetNumRows();
+  const std::size_t num_cols = conv_kernels_original.GetNumCols();
 
-          // Add delta perturbation to specific parameter.
-          conv_kernels_plus.at(i).at(j)(k, l) += delta;
+  // Loop over weights.
+  for (std::size_t i = 0; i < num_weights; ++i) {
+    // Add delta to weights.
+    std::vector<double> weights_plus = weights;
+    weights_plus.at(i) += delta;
 
-          // Evaluate output with perturbed kernel.
-          std::vector<Eigen::MatrixXd> output_volume_plus;
-          ConvMatrixMultiplication(input_volume, conv_kernels_plus, biases,
-                                   padding, stride, &output_volume_plus);
-          std::cerr << i << " " << j << std::endl;
-        }
-      }
-    }
+    // Convert back into ConvKernels.
+    const ConvKernels conv_kernels_plus(weights_plus, num_kernels, num_channels,
+                                        num_rows, num_cols);
+
+    // Evaluate output with perturbed kernel.
+    std::vector<Eigen::MatrixXd> output_volume_plus;
+    ConvMatrixMultiplication(input_volume, conv_kernels_plus.GetKernels(),
+                             biases, padding, stride, &output_volume_plus);
+    const std::vector<double> output_values_plus =
+        InputOutputVolume(output_volume_plus).GetValues();
+    const Eigen::VectorXd output_values_plus_vec =
+        Eigen::Map<const Eigen::VectorXd>(output_values_plus.data(),
+                                          output_values_plus.size());
+
+    std::cerr << "original: " << output_values_vec.transpose() << std::endl;
+    std::cerr << "plus:     " << output_values_plus_vec.transpose()
+              << std::endl;
+    std::cin.get();
   }
 }
 

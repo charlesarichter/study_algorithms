@@ -35,3 +35,15 @@ std::vector<double> ConvKernels::GetWeights() const {
   }
   return weights;
 }
+
+InputOutputVolume::InputOutputVolume(const std::vector<Eigen::MatrixXd>& volume)
+    : volume_(volume) {}
+
+std::vector<double> InputOutputVolume::GetValues() {
+  std::vector<double> values;
+  for (const Eigen::MatrixXd& channel : volume_) {
+    values.insert(values.end(), channel.data(),
+                  channel.data() + channel.rows() * channel.cols());
+  }
+  return values;
+}

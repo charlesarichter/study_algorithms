@@ -37,3 +37,13 @@ class ConvKernels {
   // std::size_t num_rows;
   // std::size_t num_cols;
 };
+
+class InputOutputVolume {
+ public:
+  InputOutputVolume(const std::vector<Eigen::MatrixXd>& volume);
+
+  std::vector<double> GetValues();
+
+ private:
+  std::vector<Eigen::MatrixXd> volume_;
+};
