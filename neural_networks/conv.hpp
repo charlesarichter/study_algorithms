@@ -65,10 +65,3 @@ void ConvMatrixMultiplication(
     const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
     const std::vector<double>& biases, const int padding, const int stride,
     std::vector<Eigen::MatrixXd>* output_volume);
-
-void RunConvTests();
-void RunConvGradientTests();
-void RunConvKernelTests();
-void TestConv(const ConvExample& conv_example);
-void TestConvGradient(const ConvExample& conv_example);
-void TestConvKernels(const ConvExample& conv_example);

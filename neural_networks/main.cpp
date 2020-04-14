@@ -3,6 +3,7 @@
 #include <string>
 
 #include "conv.hpp"
+#include "conv_tests.hpp"
 #include "nn.hpp"
 #include "training.hpp"
 

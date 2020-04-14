@@ -10,6 +10,8 @@ add_library(nn
  conv_structs.hpp
  conv_example.cpp
  conv_example.hpp
+ conv_tests.cpp
+ conv_tests.hpp
  training.cpp
  training.hpp)
 
