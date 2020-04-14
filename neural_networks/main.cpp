@@ -745,8 +745,8 @@ int main() {
   // RunTests();
   // MnistTest();
   // RunConvTests();
-  // RunConvGradientTests();
-  RunConvKernelTests();
+  // RunConvKernelTests();
+  RunConvGradientTests();
 
   return 0;
 }

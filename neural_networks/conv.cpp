@@ -212,6 +212,9 @@ void ConvMatrixMultiplication(
       Eigen::VectorXd conv_result_unrolled =
           conv_kernel_channel_unrolled.transpose() * input_channel_unrolled;
 
+      std::cerr << "Gradient of output w.r.t. weights: " << std::endl
+                << input_channel_unrolled << std::endl;
+
       // Reshape into the dimensions of the filter channel sum.
       const Eigen::MatrixXd conv_result =
           Eigen::Map<Eigen::MatrixXd>(conv_result_unrolled.data(),
@@ -279,7 +282,7 @@ void TestConvGradient(const ConvExample& conv_example) {
       output_values.data(), output_values.size());
 
   // Perturbation magnitude.
-  const double delta = 1e-6;
+  const double delta = 1e-3;
 
   // Nominal kernel weights.
   const ConvKernels conv_kernels_original(conv_kernels);
@@ -313,6 +316,11 @@ void TestConvGradient(const ConvExample& conv_example) {
     std::cerr << "original: " << output_values_vec.transpose() << std::endl;
     std::cerr << "plus:     " << output_values_plus_vec.transpose()
               << std::endl;
+    std::cerr << "gradient: "
+              << (output_values_plus_vec - output_values_vec).transpose() /
+                     delta
+              << std::endl;
+
     std::cin.get();
   }
 }
@@ -369,8 +377,8 @@ void RunConvTests() {
 }
 
 void RunConvGradientTests() {
-  const ConvExample conv_example_1 = GetConvExample1();
-  TestConvGradient(conv_example_1);
+  const ConvExample conv_example_3 = GetConvExample3();
+  TestConvGradient(conv_example_3);
 }
 
 void RunConvKernelTests() {
