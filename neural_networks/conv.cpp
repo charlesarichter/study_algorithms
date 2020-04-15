@@ -105,7 +105,8 @@ void ConvMatrixMultiplication(
     const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
     const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
     const std::vector<double>& biases, const int padding, const int stride,
-    std::vector<Eigen::MatrixXd>* output_volume) {
+    std::vector<Eigen::MatrixXd>* output_volume,
+    std::vector<Eigen::MatrixXd>* input_channels_unrolled_return) {
   // Get number of channels in the input volume.
   assert(!input_volume_unpadded.empty());
   const size_t num_channels = input_volume_unpadded.size();
@@ -223,4 +224,8 @@ void ConvMatrixMultiplication(
     }
     output_volume->emplace_back(filter_channel_sum);
   }
+
+  // Copy unrolled input channels to the output.
+  // TODO: Find a better way to do this, or better yet, just return gradient.
+  *input_channels_unrolled_return = input_channels_unrolled;
 }

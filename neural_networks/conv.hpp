@@ -64,4 +64,5 @@ void ConvMatrixMultiplication(
     const std::vector<Eigen::MatrixXd>& input_volume,
     const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
     const std::vector<double>& biases, const int padding, const int stride,
-    std::vector<Eigen::MatrixXd>* output_volume);
+    std::vector<Eigen::MatrixXd>* output_volume,
+    std::vector<Eigen::MatrixXd>* input_channels_unrolled_return);

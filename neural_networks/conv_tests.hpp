@@ -13,10 +13,9 @@ void TestConvKernels(const ConvExample& conv_example);
 /**
  * Put together a full network with multiple layers.
  */
-Eigen::VectorXd TestConvNet(
-    const InputOutputVolume& input_volume, const ConvKernels& conv_kernels,
-    const Eigen::MatrixXd& W_fc, const Eigen::VectorXd& b_fc,
-    const Eigen::MatrixXd& W_out, const Eigen::VectorXd& b_out,
-    std::vector<std::vector<Eigen::MatrixXd>>* manual_weight_gradients,
-    std::vector<std::vector<Eigen::VectorXd>>* manual_bias_gradients);
+Eigen::VectorXd TestConvNet(const InputOutputVolume& input_volume,
+                            const ConvKernels& conv_kernels,
+                            const Eigen::MatrixXd& W_out,
+                            const Eigen::VectorXd& b_out, const bool print,
+                            Eigen::MatrixXd* d_output_d_kernel);
 void TestConvNetGradients();
