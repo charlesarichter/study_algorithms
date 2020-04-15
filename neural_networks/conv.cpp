@@ -212,8 +212,8 @@ void ConvMatrixMultiplication(
       Eigen::VectorXd conv_result_unrolled =
           conv_kernel_channel_unrolled.transpose() * input_channel_unrolled;
 
-      std::cerr << "Gradient of output w.r.t. weights: " << std::endl
-                << input_channel_unrolled << std::endl;
+      // std::cerr << "Gradient of output w.r.t. weights: " << std::endl
+      //           << input_channel_unrolled << std::endl;
 
       // Reshape into the dimensions of the filter channel sum.
       const Eigen::MatrixXd conv_result =
