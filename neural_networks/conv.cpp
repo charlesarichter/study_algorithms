@@ -218,7 +218,7 @@ void ConvMatrixMultiplication(
       // Reshape into the dimensions of the filter channel sum.
       const Eigen::MatrixXd conv_result =
           Eigen::Map<Eigen::MatrixXd>(conv_result_unrolled.data(),
-                                      num_steps_horizontal, num_steps_vertical);
+                                      num_steps_vertical, num_steps_horizontal);
       filter_channel_sum += conv_result;
     }
     output_volume->emplace_back(filter_channel_sum);
