@@ -12,7 +12,6 @@ ConvKernels::ConvKernels(const std::vector<double>& weights,
                          const std::size_t num_rows,
                          const std::size_t num_cols) {
   // Reshape weights into kernels.
-  // std::vector<double>::const_iterator it = weights.begin();
   std::size_t ind = 0;
   for (std::size_t i = 0; i < num_kernels; ++i) {
     std::vector<Eigen::MatrixXd> kernel;
@@ -39,7 +38,20 @@ std::vector<double> ConvKernels::GetWeights() const {
 InputOutputVolume::InputOutputVolume(const std::vector<Eigen::MatrixXd>& volume)
     : volume_(volume) {}
 
-std::vector<double> InputOutputVolume::GetValues() {
+InputOutputVolume::InputOutputVolume(const std::vector<double>& values,
+                                     const std::size_t num_channels,
+                                     const std::size_t num_rows,
+                                     const std::size_t num_cols) {
+  // Reshape values into channels.
+  std::size_t ind = 0;
+  for (std::size_t i = 0; i < num_channels; ++i) {
+    volume_.emplace_back(Eigen::Map<const Eigen::MatrixXd>(values.data() + ind,
+                                                           num_rows, num_cols));
+    ind += num_rows * num_cols;
+  }
+}
+
+std::vector<double> InputOutputVolume::GetValues() const {
   std::vector<double> values;
   for (const Eigen::MatrixXd& channel : volume_) {
     values.insert(values.end(), channel.data(),
