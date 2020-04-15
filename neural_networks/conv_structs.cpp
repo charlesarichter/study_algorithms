@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 
 #include "conv_structs.hpp"
 
@@ -58,4 +59,30 @@ std::vector<double> InputOutputVolume::GetValues() const {
                   channel.data() + channel.rows() * channel.cols());
   }
   return values;
+}
+
+ConvKernels GetRandomConvKernels(const std::size_t num_kernels,
+                                 const std::size_t num_channels,
+                                 const std::size_t num_rows,
+                                 const std::size_t num_cols) {
+  const std::size_t num_params =
+      num_kernels * num_channels * num_rows * num_cols;
+  std::vector<double> weights(num_params);
+  std::default_random_engine generator;
+  std::uniform_real_distribution<double> dist(-1.0, 1.0);
+  std::generate(weights.begin(), weights.end(),
+                [&dist, &generator]() { return dist(generator); });
+  return ConvKernels(weights, num_kernels, num_channels, num_rows, num_cols);
+}
+
+InputOutputVolume GetRandomInputOutputVolume(const std::size_t num_channels,
+                                             const std::size_t num_rows,
+                                             const std::size_t num_cols) {
+  const std::size_t num_params = num_channels * num_rows * num_cols;
+  std::vector<double> values(num_params);
+  std::default_random_engine generator;
+  std::uniform_real_distribution<double> dist(-1.0, 1.0);
+  std::generate(values.begin(), values.end(),
+                [&dist, &generator]() { return dist(generator); });
+  return InputOutputVolume(values, num_channels, num_rows, num_cols);
 }

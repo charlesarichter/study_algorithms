@@ -46,3 +46,18 @@ class InputOutputVolume {
  private:
   std::vector<Eigen::MatrixXd> volume_;
 };
+
+/**
+ * Generate a random set of convolution kernels.
+ */
+ConvKernels GetRandomConvKernels(const std::size_t num_kernels,
+                                 const std::size_t num_channels,
+                                 const std::size_t num_rows,
+                                 const std::size_t num_cols);
+
+/**
+ * Generate a random input/output volume.
+ */
+InputOutputVolume GetRandomInputOutputVolume(const std::size_t num_channels,
+                                             const std::size_t num_rows,
+                                             const std::size_t num_cols);
