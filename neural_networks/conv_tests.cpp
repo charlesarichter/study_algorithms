@@ -5,10 +5,14 @@
 #include "nn.hpp"
 
 void TestConvNetGradients() {
-  // TODO: To implement multiple input channels, try formulating the convolution
-  // as a single big matrix multiplication with three block components.
-  std::cerr << "Next step: Enable multiple output dimensions (e.g. softmax)."
-            << std::endl;
+  // TODO:
+  // - Enable multiple output dimensions (e.g., softmax).
+  // - Try handling multiple channels in a single big matrix multiplication to
+  // avoid looping over channels.
+  // - Generalize to different stride and padding.
+  // - Add multiple conv layers (and general specification of layers)
+  // - Switch all input/output volumes to 1D buffers that can be reshaped for
+  // ease of compatibility between conv and fully connected layers.
 
   // Randomly generate input.
   const std::size_t num_channels_input = 2;
