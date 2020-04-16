@@ -18,5 +18,5 @@ Eigen::VectorXd TestConvNet(const InputOutputVolume& input_volume,
                             const Eigen::MatrixXd& W_out,
                             const Eigen::VectorXd& b_out,
                             const std::size_t num_steps_total, const bool print,
-                            Eigen::MatrixXd* d_output_d_kernel);
+                            std::vector<Eigen::MatrixXd>* d_output_d_kernel);
 void TestConvNetGradients();

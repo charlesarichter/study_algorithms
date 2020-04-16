@@ -6,7 +6,7 @@
 
 void TestConvNetGradients() {
   // Randomly generate input.
-  const std::size_t num_channels_input = 1;
+  const std::size_t num_channels_input = 2;
   const std::size_t num_rows_input = 3;
   const std::size_t num_cols_input = 4;
   const InputOutputVolume input_volume = GetRandomInputOutputVolume(
@@ -18,7 +18,6 @@ void TestConvNetGradients() {
   const std::size_t num_cols_kernel = 2;
   const ConvKernels conv_kernels = GetRandomConvKernels(
       num_kernels, num_channels_input, num_rows_kernel, num_cols_kernel);
-  const std::vector<double> biases(num_kernels, 0);
 
   // Calculate total number of elements of the conv layer output.
   const std::size_t stride = 1;  // TODO: Only works for stride of 1.
@@ -35,7 +34,7 @@ void TestConvNetGradients() {
   const Eigen::VectorXd b_out = Eigen::VectorXd::Zero(num_outputs);
 
   // Gradient containers.
-  Eigen::MatrixXd d_output_d_kernel;
+  std::vector<Eigen::MatrixXd> d_output_d_kernel;
   const Eigen::VectorXd output =
       TestConvNet(input_volume, conv_kernels, W_out, b_out, num_steps_total,
                   true, &d_output_d_kernel);
@@ -56,7 +55,7 @@ void TestConvNetGradients() {
                                              num_rows_kernel, num_cols_kernel);
 
     // Evaluate network.
-    Eigen::MatrixXd d_output_d_kernel_delta;
+    std::vector<Eigen::MatrixXd> d_output_d_kernel_delta;
     const Eigen::VectorXd output_delta =
         TestConvNet(input_volume, conv_kernels_perturbed, W_out, b_out,
                     num_steps_total, false, &d_output_d_kernel_delta);
@@ -67,13 +66,18 @@ void TestConvNetGradients() {
     std::cerr << "Numerical gradient " << numerical_gradient << std::endl;
   }
 
-  std::cerr << "Analytical gradient " << std::endl
-            << d_output_d_kernel << std::endl;
+  // Loop through the channels and display gradients corresponding to the kernel
+  // weights corresponding to each of them. TODO: Come up with a consistent
+  // ordering of weights, either by channel or by kernel, so that the ordering
+  // of weights and gradients matches everywhere.
+  std::cerr << "Analytical gradient " << std::endl;
+  for (const Eigen::MatrixXd& d_output_d_kernel_channel : d_output_d_kernel) {
+    std::cerr << d_output_d_kernel_channel << std::endl;
+  }
 
   // TODO: To implement multiple input channels, try formulating the convolution
   // as a single big matrix multiplication with three block components.
-  std::cerr << "Next steps: Enable multiple output dimensions (e.g. softmax), "
-               "and then enable multiple input channels."
+  std::cerr << "Next step: Enable multiple output dimensions (e.g. softmax)."
             << std::endl;
 }
 
@@ -82,7 +86,7 @@ Eigen::VectorXd TestConvNet(const InputOutputVolume& input_volume,
                             const Eigen::MatrixXd& W_out,
                             const Eigen::VectorXd& b_out,
                             const std::size_t num_steps_total, const bool print,
-                            Eigen::MatrixXd* d_output_d_kernel) {
+                            std::vector<Eigen::MatrixXd>* d_output_d_kernel) {
   // Compute the first conv layer.
   const int padding = 0;
   const int stride = 1;
@@ -96,6 +100,9 @@ Eigen::VectorXd TestConvNet(const InputOutputVolume& input_volume,
   const std::vector<double> conv_output_buf = conv_output_volume.GetValues();
   const Eigen::VectorXd& conv_output = Eigen::Map<const Eigen::VectorXd>(
       conv_output_buf.data(), conv_output_buf.size());
+
+  // std::cerr << "output volume data size: " << output_volume_data.size() <<
+  // std::endl;
 
   // Apply activation function to conv output.
   // TODO: Enable Activation() to more easily operate on 1D data buffers and
@@ -137,11 +144,14 @@ Eigen::VectorXd TestConvNet(const InputOutputVolume& input_volume,
       output_post_act_grad * W_out * conv_output_post_act_grad;
   const Eigen::MatrixXd b = Eigen::Map<const Eigen::MatrixXd>(
       a.data(), num_steps_total, conv_kernels.GetNumKernels());
-  // Currently only works with one input channel, accessing with .front().
-  const Eigen::MatrixXd dydw =
-      b.transpose() * input_channels_unrolled.front().transpose();
 
-  *d_output_d_kernel = dydw;
+  // Loop through the channels.
+  for (const Eigen::MatrixXd& input_channel_unrolled :
+       input_channels_unrolled) {
+    const Eigen::MatrixXd dydw =
+        b.transpose() * input_channel_unrolled.transpose();
+    d_output_d_kernel->emplace_back(dydw);
+  }
 
   return output_post_act;
 }
