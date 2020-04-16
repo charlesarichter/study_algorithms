@@ -36,8 +36,9 @@ void TestConvNetGradients() {
 
   // Gradient containers.
   Eigen::MatrixXd d_output_d_kernel;
-  const Eigen::VectorXd output = TestConvNet(input_volume, conv_kernels, W_out,
-                                             b_out, true, &d_output_d_kernel);
+  const Eigen::VectorXd output =
+      TestConvNet(input_volume, conv_kernels, W_out, b_out, num_steps_total,
+                  true, &d_output_d_kernel);
 
   // Test numerical gradients of output w.r.t. W_fc.
   const double delta = 1e-6;
@@ -57,8 +58,8 @@ void TestConvNetGradients() {
     // Evaluate network.
     Eigen::MatrixXd d_output_d_kernel_delta;
     const Eigen::VectorXd output_delta =
-        TestConvNet(input_volume, conv_kernels_perturbed, W_out, b_out, false,
-                    &d_output_d_kernel_delta);
+        TestConvNet(input_volume, conv_kernels_perturbed, W_out, b_out,
+                    num_steps_total, false, &d_output_d_kernel_delta);
 
     // Compute perturbed output.
     const Eigen::VectorXd numerical_gradient = (output_delta - output) / delta;
@@ -68,12 +69,19 @@ void TestConvNetGradients() {
 
   std::cerr << "Analytical gradient " << std::endl
             << d_output_d_kernel << std::endl;
+
+  // TODO: To implement multiple input channels, try formulating the convolution
+  // as a single big matrix multiplication with three block components.
+  std::cerr << "Next steps: Enable multiple output dimensions (e.g. softmax), "
+               "and then enable multiple input channels."
+            << std::endl;
 }
 
 Eigen::VectorXd TestConvNet(const InputOutputVolume& input_volume,
                             const ConvKernels& conv_kernels,
                             const Eigen::MatrixXd& W_out,
-                            const Eigen::VectorXd& b_out, const bool print,
+                            const Eigen::VectorXd& b_out,
+                            const std::size_t num_steps_total, const bool print,
                             Eigen::MatrixXd* d_output_d_kernel) {
   // Compute the first conv layer.
   const int padding = 0;
@@ -125,11 +133,11 @@ Eigen::VectorXd TestConvNet(const InputOutputVolume& input_volume,
   //
   // output_post_act_grad * W_out * conv_output_post_act_grad *
   // unrolled_input_matrix;
-  //
-  // Currently only works with one input channel, accessing with .front().
   const Eigen::MatrixXd a =
       output_post_act_grad * W_out * conv_output_post_act_grad;
-  const Eigen::MatrixXd b = Eigen::Map<const Eigen::MatrixXd>(a.data(), 6, 2);
+  const Eigen::MatrixXd b = Eigen::Map<const Eigen::MatrixXd>(
+      a.data(), num_steps_total, conv_kernels.GetNumKernels());
+  // Currently only works with one input channel, accessing with .front().
   const Eigen::MatrixXd dydw =
       b.transpose() * input_channels_unrolled.front().transpose();
 
