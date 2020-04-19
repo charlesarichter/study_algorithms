@@ -43,6 +43,11 @@ class InputOutputVolume {
 
   std::vector<double> GetValues() const;
 
+  // Assume that volume_ is populated and dimensionally consistent.
+  std::size_t GetNumChannels() const { return volume_.size(); }
+  std::size_t GetNumRows() const { return volume_.front().rows(); }
+  std::size_t GetNumCols() const { return volume_.front().cols(); }
+
  private:
   std::vector<Eigen::MatrixXd> volume_;
 };
