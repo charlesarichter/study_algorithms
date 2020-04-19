@@ -36,6 +36,8 @@ std::vector<double> ConvKernels::GetWeights() const {
   return weights;
 }
 
+InputOutputVolume::InputOutputVolume() {}
+
 InputOutputVolume::InputOutputVolume(const std::vector<Eigen::MatrixXd>& volume)
     : volume_(volume) {}
 

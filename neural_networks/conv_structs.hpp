@@ -34,6 +34,7 @@ class ConvKernels {
 
 class InputOutputVolume {
  public:
+  InputOutputVolume();  // TODO: Remove this constructor after refactoring.
   InputOutputVolume(const std::vector<Eigen::MatrixXd>& volume);
   InputOutputVolume(const std::vector<double>& values,
                     const std::size_t num_channels, const std::size_t num_rows,
