@@ -448,9 +448,14 @@ Eigen::VectorXd TestConvNetMultiConv(
   Eigen::MatrixXd dl2dl1 = l2_post_act_grad * W2;
 
   // TODO: Only works with single channel.
-  Eigen::MatrixXd dydw1 = dydl3 * dl3dl2 * dl2dl1 *
-                          conv_1_output_post_act_grad *
-                          conv_1_input_mat.front().transpose();
+  // Eigen::MatrixXd dydw1 = dydl3 * dl3dl2 * dl2dl1 *
+  //                         conv_1_output_post_act_grad *
+  //                         conv_1_input_mat.front().transpose();
+
+  Eigen::MatrixXd dydl1 = dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad;
+
+  // TODO: Only works with single channel.
+  Eigen::MatrixXd dydw1 = dydl1 * conv_1_input_mat.front().transpose();
 
   if (print) {
     std::cerr << std::endl;
@@ -458,8 +463,6 @@ Eigen::VectorXd TestConvNetMultiConv(
     std::cerr << dydw1 << std::endl;
     std::cerr << std::endl;
   }
-
-  Eigen::MatrixXd dydl1 = dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad;
 
   // Compute dydl0
   std::vector<Eigen::MatrixXd> output_volume_dydl0;
@@ -509,13 +512,16 @@ Eigen::VectorXd TestConvNetMultiConv(
   const Eigen::VectorXd dydl0_vec_post_act =
       conv_0_output_post_act_grad * dydl0_vec;
 
-  // if (print) {
-  //   std::cerr << "dydl0" << std::endl;
-  //   std::cerr << dydl0 << std::endl;
-  //   std::cerr << std::endl;
-  //   std::cerr << conv_0_output_post_act_grad << std::endl;
-  //   std::cerr << std::endl;
-  // }
+  // TODO: Only works with single channel.
+  Eigen::MatrixXd dydw0 = conv_0_input_mat.front() * dydl0_vec_post_act;
+  //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size()) *
+  //     conv_0_input_mat.front().transpose();
+
+  if (print) {
+    std::cerr << "dydw0" << std::endl;
+    std::cerr << dydw0 << std::endl;
+    std::cerr << std::endl;
+  }
 
   // Compute dydinput
   std::vector<Eigen::MatrixXd> output_volume_dydinput;
@@ -538,7 +544,8 @@ Eigen::VectorXd TestConvNetMultiConv(
     //   std::cerr << dydl0_reshaped << std::endl;
     // }
 
-    // "Full convolution" between dydl0_reshaped and conv_kernels_0 (flipped?).
+    // "Full convolution" between dydl0_reshaped and conv_kernels_0
+    // (flipped?).
     Eigen::MatrixXd f = conv_kernels_0.GetKernels()
                             .front()
                             .front()
@@ -562,8 +569,8 @@ Eigen::VectorXd TestConvNetMultiConv(
     const std::size_t conv_kernels_rows = dydl0_reshaped.rows();
     const std::size_t conv_kernels_cols = dydl0_reshaped.cols();
 
-    // NOTE: "Full convolution" involves sweeping the filter all the way across,
-    // max possible overlap, which can be achieved by doing a "normal"
+    // NOTE: "Full convolution" involves sweeping the filter all the way
+    // across, max possible overlap, which can be achieved by doing a "normal"
     // convolution with a padded input.
     const std::size_t full_conv_padding = conv_kernels_rows - 1;
     ConvMatrixMultiplication(input_volume, conv_kernels, biases,
