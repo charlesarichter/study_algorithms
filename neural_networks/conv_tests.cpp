@@ -767,6 +767,24 @@ void TestConvKernels(const ConvExample& conv_example) {
   }
 }
 
+void TestFullConv() {
+  const int kernel_size = 3;
+  const int input_rows = 2;
+  const int input_cols = 2;
+  const int padding = 2;
+  const int stride = 1;
+  std::vector<std::vector<Eigen::MatrixXd>> conv_kernels(
+      {{Eigen::MatrixXd::Ones(kernel_size, kernel_size)}});
+  std::vector<Eigen::MatrixXd> input_volume(
+      {Eigen::MatrixXd::Ones(input_rows, input_cols)});
+  const std::vector<double> biases{0};
+  std::vector<Eigen::MatrixXd> output_volume;
+  Conv(input_volume, conv_kernels, biases, padding, stride, &output_volume);
+
+  std::cerr << "Output volume: " << std::endl
+            << output_volume.front() << std::endl;
+}
+
 void RunConvTests() {
   const ConvExample conv_example_1 = GetConvExample1();
   TestConv(conv_example_1);

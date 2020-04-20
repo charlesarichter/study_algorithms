@@ -9,6 +9,7 @@ void RunConvKernelTests();
 void TestConv(const ConvExample& conv_example);
 void TestConvGradient(const ConvExample& conv_example);
 void TestConvKernels(const ConvExample& conv_example);
+void TestFullConv();
 
 /**
  * Put together a full network with multiple layers.
