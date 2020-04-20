@@ -748,7 +748,7 @@ int main() {
   // RunConvTests();
   // RunConvKernelTests();
   // RunConvGradientTests();
-  TestConvNetGradients();
+  TestConvNetGradientsMultiConv();
 
   return 0;
 }
