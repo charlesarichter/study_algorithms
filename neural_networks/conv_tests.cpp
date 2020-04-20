@@ -229,19 +229,18 @@ void TestConvNetGradientsMultiConv() {
   const std::size_t num_cols_kernel = 2;
   const ConvKernels conv_kernels_1 = GetRandomConvKernels(
       num_kernels, num_channels_input, num_rows_kernel, num_cols_kernel);
-
-  // const ConvKernels conv_kernels_2 = GetRandomConvKernels(
-  //     num_kernels, num_kernels, num_rows_kernel, num_cols_kernel);
+  const ConvKernels conv_kernels_2 = GetRandomConvKernels(
+      num_kernels, num_kernels, num_rows_kernel, num_cols_kernel);
 
   // Randomly generate conv biases.
   std::vector<double> conv_biases_1(num_kernels);
-  // std::vector<double> conv_biases_2(num_kernels);
+  std::vector<double> conv_biases_2(num_kernels);
   std::default_random_engine generator;
   std::uniform_real_distribution<double> dist(-1.0, 1.0);
   std::generate(conv_biases_1.begin(), conv_biases_1.end(),
                 [&dist, &generator]() { return dist(generator); });
-  // std::generate(conv_biases_2.begin(), conv_biases_2.end(),
-  //               [&dist, &generator]() { return dist(generator); });
+  std::generate(conv_biases_2.begin(), conv_biases_2.end(),
+                [&dist, &generator]() { return dist(generator); });
 
   // Calculate total number of elements of the conv layer 1 output.
   const size_t num_steps_horizontal_1 =
@@ -250,22 +249,22 @@ void TestConvNetGradientsMultiConv() {
       (num_rows_input - num_rows_kernel) / stride + 1;
   const size_t num_steps_total_1 =
       num_steps_horizontal_1 * num_steps_vertical_1;
-  std::cerr << "Num steps 1: " << num_steps_total_1 << std::endl;
+  // std::cerr << "Num steps 1: " << num_steps_total_1 << std::endl;
 
-  // // Calculate total number of elements of the conv layer 2 output.
-  // const size_t num_steps_horizontal_2 =
-  //     (num_steps_horizontal_1 - num_cols_kernel) / stride + 1;
-  // const size_t num_steps_vertical_2 =
-  //     (num_steps_vertical_1 - num_rows_kernel) / stride + 1;
-  // const size_t num_steps_total_2 =
-  //     num_steps_horizontal_2 * num_steps_vertical_2;
-  // // std::cerr << "Num steps 2: " << num_steps_total_2 << std::endl;
+  // Calculate total number of elements of the conv layer 2 output.
+  const size_t num_steps_horizontal_2 =
+      (num_steps_horizontal_1 - num_cols_kernel) / stride + 1;
+  const size_t num_steps_vertical_2 =
+      (num_steps_vertical_1 - num_rows_kernel) / stride + 1;
+  const size_t num_steps_total_2 =
+      num_steps_horizontal_2 * num_steps_vertical_2;
+  // std::cerr << "Num steps 2: " << num_steps_total_2 << std::endl;
 
   // Randomly generate fully connected and output layer weights.
   const std::size_t num_fc = 8;
   const std::size_t num_out = 1;
   const Eigen::MatrixXd W2 =
-      Eigen::MatrixXd::Random(num_fc, num_steps_total_1 * num_kernels);
+      Eigen::MatrixXd::Random(num_fc, num_steps_total_2 * num_kernels);
   const Eigen::VectorXd b2 = Eigen::VectorXd::Zero(num_fc);
   const Eigen::MatrixXd W3 = Eigen::MatrixXd::Random(num_out, num_fc);
   const Eigen::VectorXd b3 = Eigen::VectorXd::Zero(num_out);
@@ -274,10 +273,11 @@ void TestConvNetGradientsMultiConv() {
   std::vector<Eigen::MatrixXd> d_output_d_kernel;  // Each element is a channel.
   Eigen::VectorXd d_output_d_bias;
   Eigen::MatrixXd foo;
-  const Eigen::VectorXd output =
-      TestConvNetMultiConv(input_volume, conv_kernels_1, conv_biases_1, W2, b2,
-                           W3, b3, num_steps_vertical_1, num_steps_horizontal_1,
-                           true, &d_output_d_kernel, &d_output_d_bias, &foo);
+  const Eigen::VectorXd output = TestConvNetMultiConv(
+      input_volume, conv_kernels_1, conv_biases_1, conv_kernels_2,
+      conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
+      num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
+      true, &d_output_d_kernel, &d_output_d_bias, &foo);
 
   // Test numerical gradients of output w.r.t. W_fc.
   const double delta = 1e-6;
@@ -298,13 +298,14 @@ void TestConvNetGradientsMultiConv() {
     Eigen::VectorXd d_output_d_bias_delta;
     Eigen::MatrixXd foo_delta;
     const Eigen::VectorXd output_delta = TestConvNetMultiConv(
-        input_volume_perturbed, conv_kernels_1, conv_biases_1, W2, b2, W3, b3,
-        num_steps_vertical_1, num_steps_horizontal_1, false, &d_output_d_kernel,
-        &d_output_d_bias, &foo);
+        input_volume_perturbed, conv_kernels_1, conv_biases_1, conv_kernels_2,
+        conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
+        num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
+        false, &d_output_d_kernel, &d_output_d_bias, &foo);
 
     // Compute perturbed output.
     const Eigen::VectorXd numerical_gradient = (output_delta - output) / delta;
-    std::cerr << "Layer 0 numerical grad " << numerical_gradient << std::endl;
+    std::cerr << "Input numerical grad " << numerical_gradient << std::endl;
   }
 
   // Numerically compute gradient with respect to kernel weights 1.
@@ -323,90 +324,60 @@ void TestConvNetGradientsMultiConv() {
     Eigen::VectorXd d_output_d_bias_delta;
     Eigen::MatrixXd foo_delta;
     const Eigen::VectorXd output_delta = TestConvNetMultiConv(
-        input_volume, conv_kernels_1_perturbed, conv_biases_1, W2, b2, W3, b3,
-        num_steps_vertical_1, num_steps_horizontal_1, false, &d_output_d_kernel,
-        &d_output_d_bias, &foo);
+        input_volume, conv_kernels_1_perturbed, conv_biases_1, conv_kernels_2,
+        conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
+        num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
+        false, &d_output_d_kernel, &d_output_d_bias, &foo);
 
     // Compute perturbed output.
     const Eigen::VectorXd numerical_gradient = (output_delta - output) / delta;
     std::cerr << "Layer 0 numerical grad " << numerical_gradient << std::endl;
   }
 
-  // // Numerically compute gradient with respect to kernel weights 2.
-  // std::cerr << std::endl;
-  // const std::vector<double> kernel_weights_2 = conv_kernels_2.GetWeights();
-  // for (int i = 0; i < kernel_weights_2.size(); ++i) {
-  //   // Perturb kernel weights.
-  //   std::vector<double> kernel_weights_2_perturbed = kernel_weights_2;
-  //   kernel_weights_2_perturbed.at(i) += delta;
-  //   const ConvKernels conv_kernels_2_perturbed(
-  //       kernel_weights_2_perturbed, num_kernels, num_kernels,
-  //       num_rows_kernel, num_cols_kernel);
-  //
-  //   // Evaluate network.
-  //   std::vector<Eigen::MatrixXd> d_output_d_kernel_delta;
-  //   Eigen::VectorXd d_output_d_bias_delta;
-  //   Eigen::MatrixXd foo_delta;
-  //   const Eigen::VectorXd output_delta = TestConvNetMultiConv(
-  //       input_volume, conv_kernels_1, conv_biases_1,
-  //       conv_kernels_2_perturbed, conv_biases_2, W2, b2, W3, b3,
-  //       num_steps_total_1, num_steps_total_2, false,
-  //       &d_output_d_kernel_delta, &d_output_d_bias_delta, &foo_delta);
-  //
-  //   // Compute perturbed output.
-  //   const Eigen::VectorXd numerical_gradient = (output_delta - output) /
-  //   delta;
-  //   // std::cerr << "Layer 1 numerical grad " << numerical_gradient <<
-  //   // std::endl;
-  // }
-  //
-  // // Numerically compute gradient with respect to FC weights.
-  // std::cerr << std::endl;
-  // Eigen::MatrixXd num_grad_mat = Eigen::MatrixXd::Zero(W2.rows(), W2.cols());
-  // for (int i = 0; i < W2.rows(); ++i) {
-  //   for (int j = 0; j < W2.cols(); ++j) {
-  //     // Perturb weights.
-  //     Eigen::MatrixXd W2_perturbed = W2;
-  //     W2_perturbed(i, j) += delta;
-  //
-  //     // Evaluate network.
-  //     std::vector<Eigen::MatrixXd> d_output_d_kernel_delta;
-  //     Eigen::VectorXd d_output_d_bias_delta;
-  //     Eigen::MatrixXd foo_delta;
-  //     const Eigen::VectorXd output_delta = TestConvNetMultiConv(
-  //         input_volume, conv_kernels_1, conv_biases_1, conv_kernels_2,
-  //         conv_biases_2, W2_perturbed, b2, W3, b3, num_steps_total_1,
-  //         num_steps_total_2, false, &d_output_d_kernel_delta,
-  //         &d_output_d_bias_delta, &foo_delta);
-  //
-  //     // Compute perturbed output.
-  //     const Eigen::VectorXd numerical_gradient =
-  //         (output_delta - output) / delta;
-  //     // std::cerr << "Layer 1 numerical grad " << numerical_gradient <<
-  //     // std::endl;
-  //     num_grad_mat(i, j) = numerical_gradient(0);
-  //   }
-  // }
-  // // std::cerr << "Layer 2 numerical grad: " << std::endl
-  // //           << num_grad_mat.transpose() << std::endl;
+  // Numerically compute gradient with respect to kernel weights 2.
+  std::cerr << std::endl;
+  const std::vector<double> kernel_weights_2 = conv_kernels_2.GetWeights();
+  for (int i = 0; i < kernel_weights_2.size(); ++i) {
+    // Perturb kernel weights.
+    std::vector<double> kernel_weights_2_perturbed = kernel_weights_2;
+    kernel_weights_2_perturbed.at(i) += delta;
+    const ConvKernels conv_kernels_2_perturbed(
+        kernel_weights_2_perturbed, num_kernels, num_kernels, num_rows_kernel,
+        num_cols_kernel);
+
+    // Evaluate network.
+    std::vector<Eigen::MatrixXd> d_output_d_kernel_delta;
+    Eigen::VectorXd d_output_d_bias_delta;
+    Eigen::MatrixXd foo_delta;
+    const Eigen::VectorXd output_delta = TestConvNetMultiConv(
+        input_volume, conv_kernels_1, conv_biases_1, conv_kernels_2_perturbed,
+        conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
+        num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
+        false, &d_output_d_kernel, &d_output_d_bias, &foo);
+
+    // Compute perturbed output.
+    const Eigen::VectorXd numerical_gradient = (output_delta - output) / delta;
+    std::cerr << "Layer 1 numerical grad " << numerical_gradient << std::endl;
+  }
 }
 
 Eigen::VectorXd TestConvNetMultiConv(
     const InputOutputVolume& input_volume, const ConvKernels& conv_kernels_0,
-    const std::vector<double>& conv_biases_0, const Eigen::MatrixXd& W2,
+    const std::vector<double>& conv_biases_0, const ConvKernels& conv_kernels_1,
+    const std::vector<double>& conv_biases_1, const Eigen::MatrixXd& W2,
     const Eigen::VectorXd& b2, const Eigen::MatrixXd& W3,
     const Eigen::VectorXd& b3, const std::size_t num_steps_vertical_0,
-    const std::size_t num_steps_horizontal_0, const bool print,
+    const std::size_t num_steps_horizontal_0,
+    const std::size_t num_steps_vertical_1,
+    const std::size_t num_steps_horizontal_1, const bool print,
     std::vector<Eigen::MatrixXd>* d_output_d_kernel,
     Eigen::VectorXd* d_output_d_bias, Eigen::MatrixXd* foo) {
   const int padding = 0;
   const int stride = 1;
 
-  Eigen::VectorXd conv_0_output_post_act;
+  InputOutputVolume conv_0_output_post_act;
   Eigen::MatrixXd conv_0_output_post_act_grad;
   std::vector<Eigen::MatrixXd> conv_0_input_mat;
-  int conv_output_rows = 0;
-  int conv_output_cols = 0;
 
   // Conv layer 0
   {
@@ -418,50 +389,40 @@ Eigen::VectorXd TestConvNetMultiConv(
     const std::vector<double> conv_output_buf = conv_output_volume.GetValues();
     const Eigen::VectorXd& conv_output = Eigen::Map<const Eigen::VectorXd>(
         conv_output_buf.data(), conv_output_buf.size());
-    conv_0_output_post_act = Activation(
+    const Eigen::VectorXd conv_0_output_post_act_vec = Activation(
         conv_output, ActivationFunction::SIGMOID, &conv_0_output_post_act_grad);
-    // const std::vector<double> conv_0_output_post_act_buf(
-    //     conv_0_output_post_act_vec.data(),
-    //     conv_0_output_post_act_vec.data() +
-    //     conv_0_output_post_act_vec.size());
-    // conv_0_output_post_act = InputOutputVolume(
-    //     conv_0_output_post_act_buf, conv_output_volume.GetNumChannels(),
-    //     conv_output_volume.GetNumRows(), conv_output_volume.GetNumCols());
-
-    conv_output_rows = output_volume_data.front().rows();
-    conv_output_cols = output_volume_data.front().cols();
-    // if (print) {
-    //   std::cerr << "conv outputs: " << conv_output_rows << ", "
-    //             << conv_output_cols << std::endl;
-    // }
+    const std::vector<double> conv_0_output_post_act_buf(
+        conv_0_output_post_act_vec.data(),
+        conv_0_output_post_act_vec.data() + conv_0_output_post_act_vec.size());
+    conv_0_output_post_act = InputOutputVolume(
+        conv_0_output_post_act_buf, conv_output_volume.GetNumChannels(),
+        conv_output_volume.GetNumRows(), conv_output_volume.GetNumCols());
   }
 
-  // Eigen::VectorXd conv_1_output_post_act;
-  // Eigen::MatrixXd conv_1_output_post_act_grad;
-  // std::vector<Eigen::MatrixXd> conv_1_input_mat;
-  //
-  // // Conv layer 1
-  // {
-  //   std::vector<Eigen::MatrixXd> output_volume_data;
-  //   ConvMatrixMultiplication(
-  //       input_volume.GetVolume(), conv_kernels_1.GetKernels(), conv_biases_1,
-  //       padding, stride, &output_volume_data, &conv_1_input_mat);
-  //   const InputOutputVolume conv_output_volume(output_volume_data);
-  //   const std::vector<double> conv_output_buf =
-  //   conv_output_volume.GetValues(); const Eigen::VectorXd& conv_output =
-  //   Eigen::Map<const Eigen::VectorXd>(
-  //       conv_output_buf.data(), conv_output_buf.size());
-  //   conv_1_output_post_act = Activation(
-  //       conv_output, ActivationFunction::SIGMOID,
-  //       &conv_1_output_post_act_grad);
-  //
-  //   // std::cerr << "Layer 1 conv output " << conv_output_volume.GetNumRows()
-  //   //           << " " << conv_output_volume.GetNumCols() << std::endl;
-  // }
+  Eigen::VectorXd conv_1_output_post_act;
+  Eigen::MatrixXd conv_1_output_post_act_grad;
+  std::vector<Eigen::MatrixXd> conv_1_input_mat;
+
+  // Conv layer 1
+  {
+    std::vector<Eigen::MatrixXd> output_volume_data;
+    ConvMatrixMultiplication(
+        conv_0_output_post_act.GetVolume(), conv_kernels_1.GetKernels(),
+        conv_biases_1, padding, stride, &output_volume_data, &conv_1_input_mat);
+    const InputOutputVolume conv_output_volume(output_volume_data);
+    const std::vector<double> conv_output_buf = conv_output_volume.GetValues();
+    const Eigen::VectorXd& conv_output = Eigen::Map<const Eigen::VectorXd>(
+        conv_output_buf.data(), conv_output_buf.size());
+    conv_1_output_post_act = Activation(
+        conv_output, ActivationFunction::SIGMOID, &conv_1_output_post_act_grad);
+
+    // std::cerr << "Layer 1 conv output " << conv_output_volume.GetNumRows()
+    //           << " " << conv_output_volume.GetNumCols() << std::endl;
+  }
 
   // Fully connected layer.
   Eigen::MatrixXd l2_post_act_grad;
-  const Eigen::VectorXd l2_pre_act = W2 * conv_0_output_post_act + b2;
+  const Eigen::VectorXd l2_pre_act = W2 * conv_1_output_post_act + b2;
   const Eigen::VectorXd l2_post_act =
       Activation(l2_pre_act, ActivationFunction::SIGMOID, &l2_post_act_grad);
 
@@ -481,39 +442,34 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   // dy/dl2 = dy / dl3  * dl3 / dl2
   Eigen::MatrixXd dydw2 =
-      conv_0_output_post_act * l3_post_act_grad * W3 * l2_post_act_grad;
+      conv_1_output_post_act * l3_post_act_grad * W3 * l2_post_act_grad;
   Eigen::MatrixXd dydl2 = dydl3 * dl3dl2;
 
   Eigen::MatrixXd dl2dl1 = l2_post_act_grad * W2;
 
   // TODO: Only works with single channel.
   Eigen::MatrixXd dydw1 = dydl3 * dl3dl2 * dl2dl1 *
-                          conv_0_output_post_act_grad *
-                          conv_0_input_mat.front().transpose();
+                          conv_1_output_post_act_grad *
+                          conv_1_input_mat.front().transpose();
 
   if (print) {
     std::cerr << std::endl;
+    std::cerr << "dydw1" << std::endl;
     std::cerr << dydw1 << std::endl;
     std::cerr << std::endl;
   }
 
-  Eigen::MatrixXd dydl1 = dydl3 * dl3dl2 * dl2dl1 * conv_0_output_post_act_grad;
+  Eigen::MatrixXd dydl1 = dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad;
 
   // Compute dydl0
-  // Shape of l1 output is a conv output volume.
-  Eigen::MatrixXd dydl1_reshaped = Eigen::Map<Eigen::MatrixXd>(
-      dydl1.data(), num_steps_vertical_0, num_steps_horizontal_0);
-  // if (print) {
-  //   std::cerr << dydl1 << std::endl;
-  //   std::cerr << std::endl;
-  //   std::cerr << dydl1_reshaped << std::endl;
-  //   std::cerr << std::endl;
-  // }
-
-  std::vector<Eigen::MatrixXd> output_volume;
+  std::vector<Eigen::MatrixXd> output_volume_dydl0;
   {
+    // Shape of l1 output is a conv output volume.
+    Eigen::MatrixXd dydl1_reshaped = Eigen::Map<Eigen::MatrixXd>(
+        dydl1.data(), num_steps_vertical_1, num_steps_horizontal_1);
+
     // "Full convolution" between dydl1_reshaped and conv_kernels_1 (flipped?).
-    Eigen::MatrixXd f = conv_kernels_0.GetKernels()
+    Eigen::MatrixXd f = conv_kernels_1.GetKernels()
                             .front()
                             .front()
                             .rowwise()
@@ -535,101 +491,91 @@ Eigen::VectorXd TestConvNetMultiConv(
     const std::size_t input_volume_cols = f.cols();
     const std::size_t conv_kernels_rows = dydl1_reshaped.rows();
     const std::size_t conv_kernels_cols = dydl1_reshaped.cols();
-    // if (print) {
-    //   std::cerr << "Input volume: " << input_volume_rows << " x "
-    //             << input_volume_cols << std::endl;
-    //   std::cerr << "Conv kernels: " << conv_kernels_rows << " x "
-    //             << conv_kernels_cols << std::endl;
-    // }
 
     // NOTE: "Full convolution" involves sweeping the filter all the way across,
     // max possible overlap, which can be achieved by doing a "normal"
     // convolution with a padded input.
     const std::size_t full_conv_padding = conv_kernels_rows - 1;
-
-    // TODO: Symmetrical padding may not work for non-square kernels
     ConvMatrixMultiplication(input_volume, conv_kernels, biases,
-                             full_conv_padding, 1, &output_volume,
+                             full_conv_padding, 1, &output_volume_dydl0,
                              &input_channels_unrolled_return);
+  }
+  Eigen::MatrixXd dydl0 =
+      output_volume_dydl0.front().rowwise().reverse().colwise().reverse();
 
-    // Conv(input_volume, conv_kernels, biases, padding, 1, &output_volume);
-    // std::cerr << "Output volume: " << std::endl
-    //           << output_volume.front() << std::endl;
-    // std::cerr << "Input unrolled: " << std::endl
-    //           << input_channels_unrolled_return.front().rows() << " "
-    //           << input_channels_unrolled_return.front().cols() << std::endl;
+  const Eigen::VectorXd dydl0_vec =
+      Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size());
+
+  const Eigen::VectorXd dydl0_vec_post_act =
+      conv_0_output_post_act_grad * dydl0_vec;
+
+  // if (print) {
+  //   std::cerr << "dydl0" << std::endl;
+  //   std::cerr << dydl0 << std::endl;
+  //   std::cerr << std::endl;
+  //   std::cerr << conv_0_output_post_act_grad << std::endl;
+  //   std::cerr << std::endl;
+  // }
+
+  // Compute dydinput
+  std::vector<Eigen::MatrixXd> output_volume_dydinput;
+  {
+    // // Shape of l0 output is a conv output volume.
+    // const Eigen::VectorXd dydl0_vec =
+    //     Eigen::Map<const Eigen::VectorXd>(dydl0.data(), dydl0.size());
+    // const Eigen::VectorXd dydl0_vec_post_act =
+    //     conv_0_output_post_act_grad * dydl0_vec;
+    const Eigen::MatrixXd dydl0_reshaped = Eigen::Map<const Eigen::MatrixXd>(
+        dydl0_vec_post_act.data(), num_steps_vertical_0,
+        num_steps_horizontal_0);
+    // Eigen::MatrixXd dydl0_reshaped =
+    //     dydl0;  // Already correct shape since it's conv output.
+
+    // if (print) {
+    //   std::cerr << "foo" << std::endl;
+    //   std::cerr << dydl0 << std::endl;
+    //   std::cerr << std::endl;
+    //   std::cerr << dydl0_reshaped << std::endl;
     // }
+
+    // "Full convolution" between dydl0_reshaped and conv_kernels_0 (flipped?).
+    Eigen::MatrixXd f = conv_kernels_0.GetKernels()
+                            .front()
+                            .front()
+                            .rowwise()
+                            .reverse()
+                            .colwise()
+                            .reverse();
+    const std::vector<Eigen::MatrixXd> input_volume{f};
+    const std::vector<std::vector<Eigen::MatrixXd>> conv_kernels{
+        {dydl0_reshaped}};
+    std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
+    const std::vector<double> biases{0};
+
+    // TODO: Currently only works with square kernels and inputs due to the
+    // padding required for a full convolution.
+    assert(f.rows() == f.cols());
+    assert(dydl0_reshaped.rows() == dydl0_reshaped.cols());
+
+    const std::size_t input_volume_rows = f.rows();
+    const std::size_t input_volume_cols = f.cols();
+    const std::size_t conv_kernels_rows = dydl0_reshaped.rows();
+    const std::size_t conv_kernels_cols = dydl0_reshaped.cols();
+
+    // NOTE: "Full convolution" involves sweeping the filter all the way across,
+    // max possible overlap, which can be achieved by doing a "normal"
+    // convolution with a padded input.
+    const std::size_t full_conv_padding = conv_kernels_rows - 1;
+    ConvMatrixMultiplication(input_volume, conv_kernels, biases,
+                             full_conv_padding, 1, &output_volume_dydinput,
+                             &input_channels_unrolled_return);
   }
-  const Eigen::MatrixXd dydl0 = output_volume.front();
+  const Eigen::MatrixXd dydinput =
+      output_volume_dydinput.front().rowwise().reverse().colwise().reverse();
   if (print) {
-    std::cerr << dydl0 << std::endl;
+    std::cerr << "dydinput" << std::endl;
+    std::cerr << dydinput << std::endl;
   }
-
-  // Eigen::MatrixXd dydl0 = 0;
-
-  // const std::vector<double> W1_buf = conv_kernels_1.GetWeights();
-  // const Eigen::VectorXd W1 =
-  //     Eigen::Map<const Eigen::VectorXd>(W1_buf.data(), W1_buf.size());
-  //
-  // const Eigen::MatrixXd A = l3_post_act_grad * W3 * l2_post_act_grad * W2 *
-  //                           conv_1_output_post_act_grad;
-
-  // if (print) {
-  //   std::cerr << A << std::endl << std::endl;
-  //   std::cerr << W1 << std::endl << std::endl;
-  //   std::cerr << conv_0_output_post_act_grad << std::endl << std::endl;
-  //   std::cerr << conv_0_input_mat.front() << std::endl << std::endl;
-  //
-  //   std::cerr << conv_0_output_post_act_grad *
-  //                    conv_0_input_mat.front().transpose()
-  //             << std::endl
-  //             << std::endl;
-  // }
-
-  // if (print) {
-  //   std::cerr << std::endl;
-  //   std::cerr << "dydw3: " << std::endl << dydw3 << std::endl;
-  //   std::cerr << std::endl;
-  //   std::cerr << "dydw2: " << std::endl << dydw2 << std::endl;
-  //   std::cerr << std::endl;
-  //   std::cerr << "dydw1: " << std::endl << dydw1 << std::endl;
-  // }
-
-  // Compute gradient of output w.r.t. kernel weights:
-  //
-  // output_post_act_grad * W_out * conv_output_post_act_grad *
-  // unrolled_input_matrix;
-  // const Eigen::MatrixXd a =
-  //     output_post_act_grad * W_out * conv_2_output_post_act_grad;
-  //
-  // const Eigen::MatrixXd b = Eigen::Map<const Eigen::MatrixXd>(
-  //     a.data(), num_steps_total_2, conv_kernels_2.GetNumKernels());
-
-  // // Loop through the channels.
-  // for (const Eigen::MatrixXd& input_channel_unrolled : conv_2_input_mat) {
-  //   const Eigen::MatrixXd dydw =
-  //       b.transpose() * input_channel_unrolled.transpose();
-  //   d_output_d_kernel->emplace_back(dydw);
-  // }
-  // const Eigen::MatrixXd c =
-  //     b.transpose() * conv_2_input_mat.front().transpose();
-  //
-  // const Eigen::MatrixXd d = Eigen::Map<const Eigen::MatrixXd>(
-  //     c.data(), num_steps_total_1, conv_kernels_1.GetNumKernels());
-  //
-  // const Eigen::MatrixXd grad =
-  //     d.transpose() * conv_1_input_mat.front().transpose();
-  //
-  // if (print) {
-  //   std::cerr << "Gradient: " << std::endl << grad << std::endl;
-  //   std::cerr << "foo: " << conv_1_output_post_act_grad << std::endl;
-  // }
-
-  // Because we use the same bias value for each step of the convolution (per
-  // kernel), we need to essentially sum the gradient values originating from
-  // each step that pertain to the same bias value. This operation is the same
-  // as summing the columns of b.
-  // *d_output_d_bias = Eigen::VectorXd::Ones(b.rows()).transpose() * b;
 
   return l3_post_act;
 }
