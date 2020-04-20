@@ -218,15 +218,15 @@ void TestConvNetGradientsMultiConv() {
 
   // Randomly generate input.
   const std::size_t num_channels_input = 1;
-  const std::size_t num_rows_input = 6;
-  const std::size_t num_cols_input = 6;
+  const std::size_t num_rows_input = 3;
+  const std::size_t num_cols_input = 3;
   const InputOutputVolume input_volume = GetRandomInputOutputVolume(
       num_channels_input, num_rows_input, num_cols_input);
 
   // Randomly generate conv layer weights.
   const std::size_t num_kernels = 1;
-  const std::size_t num_rows_kernel = 3;
-  const std::size_t num_cols_kernel = 3;
+  const std::size_t num_rows_kernel = 2;
+  const std::size_t num_cols_kernel = 2;
   const ConvKernels conv_kernels_1 = GetRandomConvKernels(
       num_kernels, num_channels_input, num_rows_kernel, num_cols_kernel);
 
@@ -430,10 +430,10 @@ Eigen::VectorXd TestConvNetMultiConv(
 
     conv_output_rows = output_volume_data.front().rows();
     conv_output_cols = output_volume_data.front().cols();
-    if (print) {
-      std::cerr << "conv outputs: " << conv_output_rows << ", "
-                << conv_output_cols << std::endl;
-    }
+    // if (print) {
+    //   std::cerr << "conv outputs: " << conv_output_rows << ", "
+    //             << conv_output_cols << std::endl;
+    // }
   }
 
   // Eigen::VectorXd conv_1_output_post_act;
@@ -529,15 +529,32 @@ Eigen::VectorXd TestConvNetMultiConv(
     std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
     const std::vector<double> biases{0};
 
-    // NOTE: "Full convolution involves sweeping the filter all the way across,
-    // max possible overlap.  It's confusing how padding is being calculated
-    // when the filter is bigger than the input volume...Look into this!
-    // const int padding = 1;
+    // TODO: Currently only works with square kernels and inputs due to the
+    // padding required for a full convolution.
+    assert(f.rows() == f.cols());
+    assert(dydl1_reshaped.rows() == dydl1_reshaped.cols());
+
+    const std::size_t input_volume_rows = f.rows();
+    const std::size_t input_volume_cols = f.cols();
+    const std::size_t conv_kernels_rows = dydl1_reshaped.rows();
+    const std::size_t conv_kernels_cols = dydl1_reshaped.cols();
+    // if (print) {
+    //   std::cerr << "Input volume: " << input_volume_rows << " x "
+    //             << input_volume_cols << std::endl;
+    //   std::cerr << "Conv kernels: " << conv_kernels_rows << " x "
+    //             << conv_kernels_cols << std::endl;
+    // }
+
+    // NOTE: "Full convolution" involves sweeping the filter all the way across,
+    // max possible overlap, which can be achieved by doing a "normal"
+    // convolution with a padded input.
+    const std::size_t full_conv_padding = conv_kernels_rows - 1;
 
     // TODO: Hardcoded padding
     // TODO: Symmetrical padding may not work for non-square kernels
-    ConvMatrixMultiplication(input_volume, conv_kernels, biases, 3, 1,
-                             &output_volume, &input_channels_unrolled_return);
+    ConvMatrixMultiplication(input_volume, conv_kernels, biases,
+                             full_conv_padding, 1, &output_volume,
+                             &input_channels_unrolled_return);
 
     // Conv(input_volume, conv_kernels, biases, padding, 1, &output_volume);
     // std::cerr << "Output volume: " << std::endl
