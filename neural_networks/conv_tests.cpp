@@ -501,9 +501,6 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   // Compute dydl0
   // Shape of l1 output is a conv output volume.
-  // TODO: Hardcoded dimensions.
-  // Eigen::MatrixXd dydl1_reshaped =
-  //     Eigen::Map<Eigen::MatrixXd>(dydl1.data(), 4, 4);
   Eigen::MatrixXd dydl1_reshaped = Eigen::Map<Eigen::MatrixXd>(
       dydl1.data(), num_steps_vertical_0, num_steps_horizontal_0);
   // if (print) {
@@ -550,7 +547,6 @@ Eigen::VectorXd TestConvNetMultiConv(
     // convolution with a padded input.
     const std::size_t full_conv_padding = conv_kernels_rows - 1;
 
-    // TODO: Hardcoded padding
     // TODO: Symmetrical padding may not work for non-square kernels
     ConvMatrixMultiplication(input_volume, conv_kernels, biases,
                              full_conv_padding, 1, &output_volume,
