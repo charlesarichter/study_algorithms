@@ -454,6 +454,7 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   Eigen::MatrixXd dydl1 = dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad;
 
+  // Don't forget that this is also a convolution!
   // TODO: Only works with single channel.
   Eigen::MatrixXd dydw1 = dydl1 * conv_1_input_mat.front().transpose();
 
@@ -512,6 +513,7 @@ Eigen::VectorXd TestConvNetMultiConv(
   const Eigen::VectorXd dydl0_vec_post_act =
       conv_0_output_post_act_grad * dydl0_vec;
 
+  // Don't forget that this is also a convolution!
   // TODO: Only works with single channel.
   Eigen::MatrixXd dydw0 = conv_0_input_mat.front() * dydl0_vec_post_act;
   //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size()) *
