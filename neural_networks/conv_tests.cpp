@@ -176,11 +176,6 @@ Eigen::VectorXd TestConvNetMultiConv(
   const int padding = 0;
   const int stride = 1;
 
-  if (print) {
-    std::cerr << "Input channels: " << input_volume.GetNumChannels()
-              << std::endl;
-  }
-
   InputOutputVolume conv_0_output_post_act;
   Eigen::MatrixXd conv_0_output_post_act_grad;
   std::vector<Eigen::MatrixXd> conv_0_input_mat;
@@ -205,11 +200,6 @@ Eigen::VectorXd TestConvNetMultiConv(
         conv_output_volume.GetNumRows(), conv_output_volume.GetNumCols());
   }
 
-  if (print) {
-    std::cerr << "Layer 0 output channels: "
-              << conv_0_output_post_act.GetNumChannels() << std::endl;
-  }
-
   Eigen::VectorXd conv_1_output_post_act;
   Eigen::MatrixXd conv_1_output_post_act_grad;
   std::vector<Eigen::MatrixXd> conv_1_input_mat;
@@ -226,11 +216,6 @@ Eigen::VectorXd TestConvNetMultiConv(
         conv_output_buf.data(), conv_output_buf.size());
     conv_1_output_post_act = Activation(
         conv_output, ActivationFunction::SIGMOID, &conv_1_output_post_act_grad);
-
-    if (print) {
-      std::cerr << "Layer 1 output channels: "
-                << conv_output_volume.GetNumChannels() << std::endl;
-    }
 
     // std::cerr << "Layer 1 conv output " << conv_output_volume.GetNumRows()
     //           << " " << conv_output_volume.GetNumCols() << std::endl;
@@ -320,14 +305,14 @@ Eigen::VectorXd TestConvNetMultiConv(
     output_volume_dydl1.emplace_back(c);
   }
 
-  if (print) {
-    std::cerr << "Backprop Layer 1 output channels: "
-              << output_volume_dydl1.front().size() << std::endl;
-    std::cerr << "Backprop Layer 1 number of channels per kernel: "
-              << conv_kernels_1.GetNumChannels() << std::endl;
-    std::cerr << "Backprop Layer 1 number of kernels: "
-              << conv_kernels_1.GetNumKernels() << std::endl;
-  }
+  // if (print) {
+  //   std::cerr << "Backprop Layer 1 output channels: "
+  //             << output_volume_dydl1.front().size() << std::endl;
+  //   std::cerr << "Backprop Layer 1 number of channels per kernel: "
+  //             << conv_kernels_1.GetNumChannels() << std::endl;
+  //   std::cerr << "Backprop Layer 1 number of kernels: "
+  //             << conv_kernels_1.GetNumKernels() << std::endl;
+  // }
 
   // Compute dydl0
   //
@@ -351,15 +336,10 @@ Eigen::VectorXd TestConvNetMultiConv(
     //   }
 
     // TODO: Either of these loops over channels or kernels may need to reverse
-    // (just as we flipped the filters themselves).
-    if (print) {
-      std::cerr << "Don't forget to try reversing order" << std::endl;
-    }
+    // (just as we flipped the filters themselves)...or not.
     for (std::size_t j = 0; j < num_channels_per_kernel_1; ++j) {
-      // for (int j = num_channels_per_kernel_1 - 1; j >= 0; --j) {
       std::vector<Eigen::MatrixXd> input_volume_foo;
       for (std::size_t i = 0; i < num_kernels_1; ++i) {
-        // for (int i = num_kernels_1 - 1; i >= 0; --i) {
         const Eigen::MatrixXd& ck111 = ck1.at(i).at(j);
         input_volume_foo.emplace_back(
             ck111.rowwise().reverse().colwise().reverse());
@@ -400,13 +380,13 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  if (print) {
-    std::cerr << "dydl0:" << std::endl;
-    for (const auto& d : output_volume_dydl0) {
-      std::cerr << std::endl;
-      std::cerr << d << std::endl;
-    }
-  }
+  // if (print) {
+  //   std::cerr << "dydl0:" << std::endl;
+  //   for (const auto& d : output_volume_dydl0) {
+  //     std::cerr << std::endl;
+  //     std::cerr << d << std::endl;
+  //   }
+  // }
 
   // std::cerr << "Depth of dydl0: " << conv_0_output_post_act.GetNumChannels()
   //           << std::endl;
@@ -450,14 +430,14 @@ Eigen::VectorXd TestConvNetMultiConv(
   std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
       output_volume_dydl0_post_act};
 
-  if (print) {
-    std::cerr << "Backprop Layer 0 output channels: "
-              << output_volume_dydl0_expanded.front().size() << std::endl;
-    std::cerr << "Backprop Layer 0 number of channels per kernel: "
-              << conv_kernels_0.GetNumChannels() << std::endl;
-    std::cerr << "Backprop Layer 0 number of kernels: "
-              << conv_kernels_0.GetNumKernels() << std::endl;
-  }
+  // if (print) {
+  //   std::cerr << "Backprop Layer 0 output channels: "
+  //             << output_volume_dydl0_expanded.front().size() << std::endl;
+  //   std::cerr << "Backprop Layer 0 number of channels per kernel: "
+  //             << conv_kernels_0.GetNumChannels() << std::endl;
+  //   std::cerr << "Backprop Layer 0 number of kernels: "
+  //             << conv_kernels_0.GetNumKernels() << std::endl;
+  // }
 
   const std::size_t num_kernels_0 = conv_kernels_0.GetNumKernels();
   std::vector<Eigen::MatrixXd> output_volume_dydlinput;
@@ -468,15 +448,10 @@ Eigen::VectorXd TestConvNetMultiConv(
     const std::size_t num_channels_per_kernel_0 = ck0.front().size();
 
     // TODO: Either of these loops over channels or kernels may need to reverse
-    // (just as we flipped the filters themselves).
-    if (print) {
-      std::cerr << "Don't forget to try reversing order" << std::endl;
-    }
+    // (just as we flipped the filters themselves)...or not.
     for (std::size_t j = 0; j < num_channels_per_kernel_0; ++j) {
-      // for (int j = num_channels_per_kernel_0 - 1; j >= 0; --j) {
       std::vector<Eigen::MatrixXd> input_volume_foo;
       for (std::size_t i = 0; i < num_kernels_0; ++i) {
-        // for (int i = num_kernels_0 - 1; i >= 0; --i) {
         const Eigen::MatrixXd& ck000 = ck0.at(i).at(j);
         input_volume_foo.emplace_back(
             ck000.rowwise().reverse().colwise().reverse());
@@ -524,113 +499,6 @@ Eigen::VectorXd TestConvNetMultiConv(
       std::cerr << d << std::endl;
     }
   }
-
-  return l3_post_act;
-  //
-  //   std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-  //   const std::vector<double> biases{0};
-  //
-  //   // TODO: Currently only works with square kernels and inputs due to the
-  //   // padding required for a full convolution.
-  //   assert(f.rows() == f.cols());
-  //   assert(dydl1_reshaped.rows() == dydl1_reshaped.cols());
-  //
-  //   const std::size_t input_volume_rows = f.rows();
-  //   const std::size_t input_volume_cols = f.cols();
-  //   const std::size_t conv_kernels_rows = dydl1_reshaped.rows();
-  //   const std::size_t conv_kernels_cols = dydl1_reshaped.cols();
-  //
-  //   // NOTE: "Full convolution" involves sweeping the filter all the way
-  //   across,
-  //   // max possible overlap, which can be achieved by doing a "normal"
-  //   // convolution with a padded input.
-  //   const std::size_t full_conv_padding = conv_kernels_rows - 1;
-  //   ConvMatrixMultiplication(input_volume, conv_kernels, biases,
-  //                            full_conv_padding, 1, &output_volume_dydl0,
-  //                            &input_channels_unrolled_return);
-  // }
-  // Eigen::MatrixXd dydl0 =
-  //     output_volume_dydl0.front().rowwise().reverse().colwise().reverse();
-  //
-  // const Eigen::VectorXd dydl0_vec =
-  //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size());
-  //
-  // const Eigen::VectorXd dydl0_vec_post_act =
-  //     conv_0_output_post_act_grad * dydl0_vec;
-  //
-  // // Don't forget that this is also a convolution!
-  // // TODO: Only works with single channel.
-  // Eigen::MatrixXd dydw0 = conv_0_input_mat.front() * dydl0_vec_post_act;
-  // //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size()) *
-  // //     conv_0_input_mat.front().transpose();
-  //
-  // if (print) {
-  //   std::cerr << "dydw0" << std::endl;
-  //   std::cerr << dydw0 << std::endl;
-  //   std::cerr << std::endl;
-  // }
-  //
-  // // Compute dydinput
-  // std::vector<Eigen::MatrixXd> output_volume_dydinput;
-  // {
-  //   // // Shape of l0 output is a conv output volume.
-  //   // const Eigen::VectorXd dydl0_vec =
-  //   //     Eigen::Map<const Eigen::VectorXd>(dydl0.data(), dydl0.size());
-  //   // const Eigen::VectorXd dydl0_vec_post_act =
-  //   //     conv_0_output_post_act_grad * dydl0_vec;
-  //   const Eigen::MatrixXd dydl0_reshaped = Eigen::Map<const Eigen::MatrixXd>(
-  //       dydl0_vec_post_act.data(), num_steps_vertical_0,
-  //       num_steps_horizontal_0);
-  //   // Eigen::MatrixXd dydl0_reshaped =
-  //   //     dydl0;  // Already correct shape since it's conv output.
-  //
-  //   // if (print) {
-  //   //   std::cerr << "foo" << std::endl;
-  //   //   std::cerr << dydl0 << std::endl;
-  //   //   std::cerr << std::endl;
-  //   //   std::cerr << dydl0_reshaped << std::endl;
-  //   // }
-  //
-  //   // "Full convolution" between dydl0_reshaped and conv_kernels_0
-  //   // (flipped?).
-  //   Eigen::MatrixXd f = conv_kernels_0.GetKernels()
-  //                           .front()
-  //                           .front()
-  //                           .rowwise()
-  //                           .reverse()
-  //                           .colwise()
-  //                           .reverse();
-  //   const std::vector<Eigen::MatrixXd> input_volume{f};
-  //   const std::vector<std::vector<Eigen::MatrixXd>> conv_kernels{
-  //       {dydl0_reshaped}};
-  //   std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-  //   const std::vector<double> biases{0};
-  //
-  //   // TODO: Currently only works with square kernels and inputs due to the
-  //   // padding required for a full convolution.
-  //   assert(f.rows() == f.cols());
-  //   assert(dydl0_reshaped.rows() == dydl0_reshaped.cols());
-  //
-  //   const std::size_t input_volume_rows = f.rows();
-  //   const std::size_t input_volume_cols = f.cols();
-  //   const std::size_t conv_kernels_rows = dydl0_reshaped.rows();
-  //   const std::size_t conv_kernels_cols = dydl0_reshaped.cols();
-  //
-  //   // NOTE: "Full convolution" involves sweeping the filter all the way
-  //   // across, max possible overlap, which can be achieved by doing a
-  //   "normal"
-  //   // convolution with a padded input.
-  //   const std::size_t full_conv_padding = conv_kernels_rows - 1;
-  //   ConvMatrixMultiplication(input_volume, conv_kernels, biases,
-  //                            full_conv_padding, 1, &output_volume_dydinput,
-  //                            &input_channels_unrolled_return);
-  // }
-  // const Eigen::MatrixXd dydinput =
-  //     output_volume_dydinput.front().rowwise().reverse().colwise().reverse();
-  // if (print) {
-  //   std::cerr << "dydinput" << std::endl;
-  //   std::cerr << dydinput << std::endl;
-  // }
 
   return l3_post_act;
 }
