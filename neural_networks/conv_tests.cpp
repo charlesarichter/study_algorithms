@@ -509,7 +509,11 @@ Eigen::VectorXd TestConvNetMultiConv(
       // Is it true that this will always be a single "channel"? This number
       // is the number of "kernels" (dydl0
       assert(output_volume_iteration.size() == 1);
-      output_volume_dydlinput.emplace_back(output_volume_iteration.front());
+      output_volume_dydlinput.emplace_back(output_volume_iteration.front()
+                                               .rowwise()
+                                               .reverse()
+                                               .colwise()
+                                               .reverse());
     }
   }
 
