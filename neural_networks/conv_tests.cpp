@@ -287,6 +287,14 @@ Eigen::VectorXd TestConvNetMultiConv(
     dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
   }
 
+  if (print) {
+    std::cerr << "dydw1" << std::endl;
+    for (const auto& dydw : dydw1_kernels) {
+      std::cerr << dydw << std::endl;
+      std::cerr << std::endl;
+    }
+  }
+
   // Don't forget that this is also a convolution!
   // TODO: Only works with single channel.
   // Eigen::MatrixXd dydw1 = dydl1 * conv_1_input_mat.front().transpose();
@@ -390,6 +398,76 @@ Eigen::VectorXd TestConvNetMultiConv(
   //   }
   // }
 
+  /////////////////////////////
+  //
+  //
+  //
+  // Wrap values of dydl1 into a matrix where each row corresponds to a kernel.
+  // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
+  // the output of the network, is multidimensional).
+  //
+  // assert(dydl1.rows() == 1);
+  // Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
+  //     dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
+  //
+  // Don't forget that this is also a convolution!  TODO: See if we can avoid
+  // looping over kernels if we can compute convolution with each kernel
+  // simultaneously via matrix multiplication, whether the unrolled
+  // weight/kernel vector is a matrix of unrolled kernels stacked together.
+  //
+  // std::vector<Eigen::MatrixXd> dydw1_kernels;
+  // for (std::size_t i = 0; i < num_kernels_1; ++i) {
+  //   dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
+  // }
+  //
+  //
+  //
+  //
+  // Eigen::MatrixXd dydl0 =
+  //     output_volume_dydl0.front().rowwise().reverse().colwise().reverse();
+  //
+  // const Eigen::VectorXd dydl0_vec =
+  //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size());
+  //
+  // const Eigen::VectorXd dydl0_vec_post_act =
+  //     conv_0_output_post_act_grad * dydl0_vec;
+  //
+  // Don't forget that this is also a convolution!
+  // TODO: Only works with single channel.
+  // Eigen::MatrixXd dydw0 = conv_0_input_mat.front() * dydl0_vec_post_act;
+  //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size()) *
+  //     conv_0_input_mat.front().transpose();
+  //
+  //
+  //
+
+  // Have:
+  // output_volume_dydl0
+  // conv_0_output_post_act_grad
+
+  // Need:
+  // dydl0_vec_post_act
+
+  // if (print) {
+  //   std::cerr << "Number of elements in output_volume_dydl0: "
+  //             << output_volume_dydl0.size() << std::endl;
+  //   std::cerr << "Size of each element in output_volume_dydl0: "
+  //             << output_volume_dydl0.front().rows() << " "
+  //             << output_volume_dydl0.front().cols() << std::endl;
+  //   std::cerr << "Number of elements in conv_0_output_post_act_grad: "
+  //             << conv_0_output_post_act_grad.rows() << " "
+  //             << conv_0_output_post_act_grad.cols() << std::endl;
+  // }
+
+  // std::vector<Eigen::MatrixXd> dydw0_kernels;
+  // for (std::size_t i = 0; i < num_kernels_0; ++i) {
+  //   dydw0_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
+  // }
+
+  //
+  //
+  /////////////////////////////
+
   // std::cerr << "Depth of dydl0: " << conv_0_output_post_act.GetNumChannels()
   //           << std::endl;
   // std::cerr << "Rows of dydl0:  " << conv_0_output_post_act.GetNumRows()
@@ -426,6 +504,60 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
+  if (print) {
+    std::cerr << "conv 0 input mat: " << conv_0_input_mat.size() << std::endl;
+    std::cerr << "conv 0 input mat element size: "
+              << conv_0_input_mat.front().rows() << " "
+              << conv_0_input_mat.front().cols() << std::endl;
+    std::cerr << "output_volume_dydl0_post_act: "
+              << output_volume_dydl0_post_act.size() << std::endl;
+    std::cerr << "output_volume_dydl0_post_act element: "
+              << output_volume_dydl0_post_act.front().rows() << " "
+              << output_volume_dydl0_post_act.front().cols() << std::endl;
+
+    // std::cerr << "Size of each element in output_volume_dydl0: "
+    //           << output_volume_dydl0.front().rows() << " "
+    //           << output_volume_dydl0.front().cols() << std::endl;
+    // std::cerr << "Number of elements in conv_0_output_post_act_grad: "
+    //           << conv_0_output_post_act_grad.rows() << " "
+    //           << conv_0_output_post_act_grad.cols() << std::endl;
+  }
+
+  // Using this:
+  //
+  // Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
+  //     dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
+  //
+  // Wrap conv_0_output_post_act_grad into a matrix of stacked columns, where
+  // each column corresponds to a kernel and multiply it by each element of
+  // conv_0_input_mat in a loop.
+
+  const std::size_t num_kernels_0 = conv_kernels_0.GetNumKernels();
+  Eigen::MatrixXd dydl0_wrapped = Eigen::MatrixXd::Zero(
+      output_volume_dydl0_post_act.front().size(), num_kernels_0);
+  for (int i = 0; i < output_volume_dydl0_post_act.size(); ++i) {
+    const Eigen::MatrixXd& m = output_volume_dydl0_post_act.at(i);
+    dydl0_wrapped.col(i) =
+        Eigen::Map<const Eigen::VectorXd>(m.data(), m.size());
+  }
+
+  std::vector<Eigen::MatrixXd> dydw0_kernels;
+  for (int i = 0; i < conv_0_input_mat.size(); ++i) {
+    dydw0_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
+  }
+  if (print) {
+    std::cerr << "dydw0" << std::endl;
+    for (const auto& dydw : dydw0_kernels) {
+      std::cerr << dydw << std::endl;
+      std::cerr << std::endl;
+    }
+  }
+
+  // if (print) {
+  //   std::cerr << "dydl0_wrapped: " << std::endl << dydl0_wrapped <<
+  //   std::endl;
+  // }
+
   // Convert output_volume_dydl0 container to an input/output volume
   // std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
   //     output_volume_dydl0};
@@ -441,7 +573,6 @@ Eigen::VectorXd TestConvNetMultiConv(
   //             << conv_kernels_0.GetNumKernels() << std::endl;
   // }
 
-  const std::size_t num_kernels_0 = conv_kernels_0.GetNumKernels();
   std::vector<Eigen::MatrixXd> output_volume_dydlinput;
   {
     // For each kernel in conv_kernels_1, perform convolution.
