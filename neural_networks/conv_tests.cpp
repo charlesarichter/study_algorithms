@@ -117,8 +117,9 @@ void TestConvNetGradientsMultiConv() {
     std::vector<double> kernel_weights_1_perturbed = kernel_weights_1;
     kernel_weights_1_perturbed.at(i) += delta;
     const ConvKernels conv_kernels_1_perturbed(
-        kernel_weights_1_perturbed, num_kernels, num_kernels, num_rows_kernel,
-        num_cols_kernel);
+        kernel_weights_1_perturbed, conv_kernels_1.GetNumKernels(),
+        conv_kernels_1.GetNumChannels(), conv_kernels_1.GetNumRows(),
+        conv_kernels_1.GetNumCols());
 
     // Evaluate network.
     std::vector<Eigen::MatrixXd> d_output_d_kernel_delta;
@@ -143,8 +144,9 @@ void TestConvNetGradientsMultiConv() {
     std::vector<double> kernel_weights_2_perturbed = kernel_weights_2;
     kernel_weights_2_perturbed.at(i) += delta;
     const ConvKernels conv_kernels_2_perturbed(
-        kernel_weights_2_perturbed, num_kernels, num_kernels, num_rows_kernel,
-        num_cols_kernel);
+        kernel_weights_2_perturbed, conv_kernels_2.GetNumKernels(),
+        conv_kernels_2.GetNumChannels(), conv_kernels_2.GetNumRows(),
+        conv_kernels_2.GetNumCols());
 
     // Evaluate network.
     std::vector<Eigen::MatrixXd> d_output_d_kernel_delta;
