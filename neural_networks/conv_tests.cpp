@@ -218,9 +218,6 @@ Eigen::VectorXd TestConvNetMultiConv(
         conv_output_buf.data(), conv_output_buf.size());
     conv_1_output_post_act = Activation(
         conv_output, ActivationFunction::SIGMOID, &conv_1_output_post_act_grad);
-
-    // std::cerr << "Layer 1 conv output " << conv_output_volume.GetNumRows()
-    //           << " " << conv_output_volume.GetNumCols() << std::endl;
   }
 
   // Fully connected layer.
@@ -267,9 +264,6 @@ Eigen::VectorXd TestConvNetMultiConv(
   assert(dydl1_cols % num_kernels_1 == 0);
   assert(num_dydl1_per_kernel == conv_1_input_mat.front().cols());
 
-  // std::cerr << "dydl1: " << dydl1.rows() << ", " << dydl1.cols() <<
-  // std::endl;
-
   // Wrap values of dydl1 into a matrix where each row corresponds to a kernel.
   // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
   // the output of the network, is multidimensional).
@@ -315,15 +309,6 @@ Eigen::VectorXd TestConvNetMultiConv(
     output_volume_dydl1.emplace_back(c);
   }
 
-  // if (print) {
-  //   std::cerr << "Backprop Layer 1 output channels: "
-  //             << output_volume_dydl1.front().size() << std::endl;
-  //   std::cerr << "Backprop Layer 1 number of channels per kernel: "
-  //             << conv_kernels_1.GetNumChannels() << std::endl;
-  //   std::cerr << "Backprop Layer 1 number of kernels: "
-  //             << conv_kernels_1.GetNumKernels() << std::endl;
-  // }
-
   // Compute dydl0
   //
   // Convolve L1 kernels (input) with dydl1 gradients (kernels)
@@ -337,13 +322,6 @@ Eigen::VectorXd TestConvNetMultiConv(
     const std::vector<std::vector<Eigen::MatrixXd>>& ck1 =
         conv_kernels_1.GetKernels();
     const std::size_t num_channels_per_kernel_1 = ck1.front().size();
-    // for (std::size_t i = 0; i < num_kernels_1; ++i) {
-    //   const std::vector<Eigen::MatrixXd>& ck11 = ck1.at(i);
-    //   std::vector<Eigen::MatrixXd> input_volume_foo;
-    //   for (const Eigen::MatrixXd& k : ck11) {
-    //     input_volume_foo.emplace_back(
-    //         k.rowwise().reverse().colwise().reverse());
-    //   }
 
     // TODO: Either of these loops over channels or kernels may need to reverse
     // (just as we flipped the filters themselves)...or not.
@@ -390,91 +368,6 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  // if (print) {
-  //   std::cerr << "dydl0:" << std::endl;
-  //   for (const auto& d : output_volume_dydl0) {
-  //     std::cerr << std::endl;
-  //     std::cerr << d << std::endl;
-  //   }
-  // }
-
-  /////////////////////////////
-  //
-  //
-  //
-  // Wrap values of dydl1 into a matrix where each row corresponds to a kernel.
-  // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
-  // the output of the network, is multidimensional).
-  //
-  // assert(dydl1.rows() == 1);
-  // Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
-  //     dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
-  //
-  // Don't forget that this is also a convolution!  TODO: See if we can avoid
-  // looping over kernels if we can compute convolution with each kernel
-  // simultaneously via matrix multiplication, whether the unrolled
-  // weight/kernel vector is a matrix of unrolled kernels stacked together.
-  //
-  // std::vector<Eigen::MatrixXd> dydw1_kernels;
-  // for (std::size_t i = 0; i < num_kernels_1; ++i) {
-  //   dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
-  // }
-  //
-  //
-  //
-  //
-  // Eigen::MatrixXd dydl0 =
-  //     output_volume_dydl0.front().rowwise().reverse().colwise().reverse();
-  //
-  // const Eigen::VectorXd dydl0_vec =
-  //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size());
-  //
-  // const Eigen::VectorXd dydl0_vec_post_act =
-  //     conv_0_output_post_act_grad * dydl0_vec;
-  //
-  // Don't forget that this is also a convolution!
-  // TODO: Only works with single channel.
-  // Eigen::MatrixXd dydw0 = conv_0_input_mat.front() * dydl0_vec_post_act;
-  //     Eigen::Map<Eigen::VectorXd>(dydl0.data(), dydl0.size()) *
-  //     conv_0_input_mat.front().transpose();
-  //
-  //
-  //
-
-  // Have:
-  // output_volume_dydl0
-  // conv_0_output_post_act_grad
-
-  // Need:
-  // dydl0_vec_post_act
-
-  // if (print) {
-  //   std::cerr << "Number of elements in output_volume_dydl0: "
-  //             << output_volume_dydl0.size() << std::endl;
-  //   std::cerr << "Size of each element in output_volume_dydl0: "
-  //             << output_volume_dydl0.front().rows() << " "
-  //             << output_volume_dydl0.front().cols() << std::endl;
-  //   std::cerr << "Number of elements in conv_0_output_post_act_grad: "
-  //             << conv_0_output_post_act_grad.rows() << " "
-  //             << conv_0_output_post_act_grad.cols() << std::endl;
-  // }
-
-  // std::vector<Eigen::MatrixXd> dydw0_kernels;
-  // for (std::size_t i = 0; i < num_kernels_0; ++i) {
-  //   dydw0_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
-  // }
-
-  //
-  //
-  /////////////////////////////
-
-  // std::cerr << "Depth of dydl0: " << conv_0_output_post_act.GetNumChannels()
-  //           << std::endl;
-  // std::cerr << "Rows of dydl0:  " << conv_0_output_post_act.GetNumRows()
-  //           << std::endl;
-  // std::cerr << "Cols of dydl0:  " << conv_0_output_post_act.GetNumCols()
-  //           << std::endl;
-
   // Unwrap output_volume_dydl0 and multiply by conv_0_output_post_act_grad.
   std::vector<Eigen::MatrixXd> output_volume_dydl0_post_act;
   {
@@ -504,34 +397,9 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  if (print) {
-    std::cerr << "conv 0 input mat: " << conv_0_input_mat.size() << std::endl;
-    std::cerr << "conv 0 input mat element size: "
-              << conv_0_input_mat.front().rows() << " "
-              << conv_0_input_mat.front().cols() << std::endl;
-    std::cerr << "output_volume_dydl0_post_act: "
-              << output_volume_dydl0_post_act.size() << std::endl;
-    std::cerr << "output_volume_dydl0_post_act element: "
-              << output_volume_dydl0_post_act.front().rows() << " "
-              << output_volume_dydl0_post_act.front().cols() << std::endl;
-
-    // std::cerr << "Size of each element in output_volume_dydl0: "
-    //           << output_volume_dydl0.front().rows() << " "
-    //           << output_volume_dydl0.front().cols() << std::endl;
-    // std::cerr << "Number of elements in conv_0_output_post_act_grad: "
-    //           << conv_0_output_post_act_grad.rows() << " "
-    //           << conv_0_output_post_act_grad.cols() << std::endl;
-  }
-
-  // Using this:
-  //
-  // Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
-  //     dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
-  //
   // Wrap conv_0_output_post_act_grad into a matrix of stacked columns, where
   // each column corresponds to a kernel and multiply it by each element of
   // conv_0_input_mat in a loop.
-
   const std::size_t num_kernels_0 = conv_kernels_0.GetNumKernels();
   Eigen::MatrixXd dydl0_wrapped = Eigen::MatrixXd::Zero(
       output_volume_dydl0_post_act.front().size(), num_kernels_0);
@@ -553,25 +421,9 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  // if (print) {
-  //   std::cerr << "dydl0_wrapped: " << std::endl << dydl0_wrapped <<
-  //   std::endl;
-  // }
-
   // Convert output_volume_dydl0 container to an input/output volume
-  // std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
-  //     output_volume_dydl0};
   std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
       output_volume_dydl0_post_act};
-
-  // if (print) {
-  //   std::cerr << "Backprop Layer 0 output channels: "
-  //             << output_volume_dydl0_expanded.front().size() << std::endl;
-  //   std::cerr << "Backprop Layer 0 number of channels per kernel: "
-  //             << conv_kernels_0.GetNumChannels() << std::endl;
-  //   std::cerr << "Backprop Layer 0 number of kernels: "
-  //             << conv_kernels_0.GetNumKernels() << std::endl;
-  // }
 
   std::vector<Eigen::MatrixXd> output_volume_dydlinput;
   {
