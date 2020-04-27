@@ -415,9 +415,40 @@ Eigen::VectorXd TestConvNetMultiConv(
   // std::cerr << "Cols of dydl0:  " << conv_0_output_post_act.GetNumCols()
   //           << std::endl;
 
+  // Unwrap output_volume_dydl0 and multiply by conv_0_output_post_act_grad.
+  std::vector<Eigen::MatrixXd> output_volume_dydl0_post_act;
+  {
+    const int num_channel_dydl0 = output_volume_dydl0.size();
+    const int num_rows_per_channel_dydl0 = output_volume_dydl0.front().rows();
+    const int num_cols_per_channel_dydl0 = output_volume_dydl0.front().cols();
+    const int num_per_channel_dydl0 = output_volume_dydl0.front().size();
+    Eigen::VectorXd dydl0_vec =
+        Eigen::VectorXd::Zero(num_channel_dydl0 * num_per_channel_dydl0);
+    for (std::size_t i = 0; i < num_channel_dydl0; ++i) {
+      const Eigen::MatrixXd& m = output_volume_dydl0.at(i);
+      const Eigen::VectorXd m_vec =
+          Eigen::Map<const Eigen::VectorXd>(m.data(), m.size());
+      dydl0_vec.segment(i * num_per_channel_dydl0, num_per_channel_dydl0) =
+          m_vec;
+    }
+    const Eigen::VectorXd dydl0_vec_post_act =
+        conv_0_output_post_act_grad * dydl0_vec;
+
+    // Wrap back into matrices.
+    for (std::size_t i = 0; i < num_channel_dydl0; ++i) {
+      const Eigen::VectorXd& n = dydl0_vec_post_act.segment(
+          i * num_per_channel_dydl0, num_per_channel_dydl0);
+      const Eigen::MatrixXd o = Eigen::Map<const Eigen::MatrixXd>(
+          n.data(), num_rows_per_channel_dydl0, num_cols_per_channel_dydl0);
+      output_volume_dydl0_post_act.emplace_back(o);
+    }
+  }
+
   // Convert output_volume_dydl0 container to an input/output volume
+  // std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
+  //     output_volume_dydl0};
   std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
-      output_volume_dydl0};
+      output_volume_dydl0_post_act};
 
   if (print) {
     std::cerr << "Backprop Layer 0 output channels: "
