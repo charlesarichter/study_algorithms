@@ -67,3 +67,8 @@ ConvKernels GetRandomConvKernels(const std::size_t num_kernels,
 InputOutputVolume GetRandomInputOutputVolume(const std::size_t num_channels,
                                              const std::size_t num_rows,
                                              const std::size_t num_cols);
+
+// Element-wise product of InputOutputVolumes
+InputOutputVolume operator*(const InputOutputVolume& volume_1,
+                            const InputOutputVolume& volume_2);
+
