@@ -429,7 +429,7 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  // Wrap conv_0_output_post_act_grad into a matrix of stacked columns, where
+  // Wrap conv_0_output_post_act into a matrix of stacked columns, where
   // each column corresponds to a kernel and multiply it by each element of
   // conv_0_input_mat in a loop.
   const std::size_t num_kernels_0 = conv_kernels_0.GetNumKernels();
