@@ -4,6 +4,38 @@
 #include "conv_tests.hpp"
 #include "nn.hpp"
 
+// TODO: Temporarily using a wrapper around Activation, but these
+// implementations should be unified somehow.
+static InputOutputVolume Activation(
+    const InputOutputVolume& input,
+    const ActivationFunction& activation_function,
+    InputOutputVolume* activation_gradient) {
+  const std::vector<double> input_buf = input.GetValues();
+  const Eigen::VectorXd& input_vec =
+      Eigen::Map<const Eigen::VectorXd>(input_buf.data(), input_buf.size());
+
+  Eigen::MatrixXd grad_mat;
+  const Eigen::VectorXd output_vec =
+      Activation(input_vec, activation_function, &grad_mat);
+
+  // TODO: Activation() currently returns gradients as a diagonal matrix, but
+  // really what we care about is the diagonal vector.
+  const Eigen::VectorXd grad_vec =
+      grad_mat * Eigen::VectorXd::Ones(grad_mat.cols());
+
+  // Package gradient as InputOutputVolume
+  const std::vector<double> grad_buf(grad_vec.data(),
+                                     grad_vec.data() + grad_vec.size());
+  *activation_gradient = InputOutputVolume(
+      grad_buf, input.GetNumChannels(), input.GetNumRows(), input.GetNumCols());
+
+  // Package output as InputOutputVolume
+  const std::vector<double> output_buf(output_vec.data(),
+                                       output_vec.data() + output_vec.size());
+  return InputOutputVolume(output_buf, input.GetNumChannels(),
+                           input.GetNumRows(), input.GetNumCols());
+}
+
 void TestConvNetGradientsMultiConv() {
   // TODO:
   // - Enable multiple output dimensions (e.g., softmax).
