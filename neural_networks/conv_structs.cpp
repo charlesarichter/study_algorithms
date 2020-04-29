@@ -54,6 +54,11 @@ InputOutputVolume::InputOutputVolume(const std::vector<double>& values,
   }
 }
 
+Eigen::VectorXd InputOutputVolume::GetVolumeVec() const {
+  const std::vector<double> values = GetValues();  // TODO: Avoid this copy.
+  return Eigen::Map<const Eigen::VectorXd>(values.data(), values.size());
+}
+
 std::vector<double> InputOutputVolume::GetValues() const {
   std::vector<double> values;
   for (const Eigen::MatrixXd& channel : volume_) {

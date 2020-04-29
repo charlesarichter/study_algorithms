@@ -229,27 +229,36 @@ Eigen::VectorXd TestConvNetMultiConv(
                    &conv_0_output_post_act_grad);
   }
 
-  Eigen::VectorXd conv_1_output_post_act;
-  Eigen::MatrixXd conv_1_output_post_act_grad;
+  InputOutputVolume conv_1_output_post_act;
+  InputOutputVolume conv_1_output_post_act_grad;
   std::vector<Eigen::MatrixXd> conv_1_input_mat;
 
   // Conv layer 1
   {
+    // Perform convolution.
     std::vector<Eigen::MatrixXd> output_volume_data;
     ConvMatrixMultiplication(
         conv_0_output_post_act.GetVolume(), conv_kernels_1.GetKernels(),
         conv_biases_1, padding, stride, &output_volume_data, &conv_1_input_mat);
     const InputOutputVolume conv_output_volume(output_volume_data);
-    const std::vector<double> conv_output_buf = conv_output_volume.GetValues();
-    const Eigen::VectorXd& conv_output = Eigen::Map<const Eigen::VectorXd>(
-        conv_output_buf.data(), conv_output_buf.size());
-    conv_1_output_post_act = Activation(
-        conv_output, ActivationFunction::SIGMOID, &conv_1_output_post_act_grad);
+
+    // Apply activation.
+    conv_1_output_post_act =
+        Activation(conv_output_volume, ActivationFunction::SIGMOID,
+                   &conv_1_output_post_act_grad);
   }
+
+  // Convert conv output volume and gradient to vectors to interface with fully
+  // connected layer. TODO: Consider how to implement a more abstract layer
+  // interface or reshaping layer whose role is just to reshape as appropriate.
+  const Eigen::VectorXd conv_1_output_post_act_vec =
+      conv_1_output_post_act.GetVolumeVec();
+  const Eigen::VectorXd conv_1_output_post_act_grad_vec =
+      conv_1_output_post_act_grad.GetVolumeVec();
 
   // Fully connected layer.
   Eigen::MatrixXd l2_post_act_grad;
-  const Eigen::VectorXd l2_pre_act = W2 * conv_1_output_post_act + b2;
+  const Eigen::VectorXd l2_pre_act = W2 * conv_1_output_post_act_vec + b2;
   const Eigen::VectorXd l2_post_act =
       Activation(l2_pre_act, ActivationFunction::SIGMOID, &l2_post_act_grad);
 
@@ -269,7 +278,7 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   // dy/dl2 = dy / dl3  * dl3 / dl2
   Eigen::MatrixXd dydw2 =
-      conv_1_output_post_act * l3_post_act_grad * W3 * l2_post_act_grad;
+      conv_1_output_post_act_vec * l3_post_act_grad * W3 * l2_post_act_grad;
   Eigen::MatrixXd dydl2 = dydl3 * dl3dl2;
 
   Eigen::MatrixXd dl2dl1 = l2_post_act_grad * W2;
@@ -279,7 +288,8 @@ Eigen::VectorXd TestConvNetMultiConv(
   //                         conv_1_output_post_act_grad *
   //                         conv_1_input_mat.front().transpose();
 
-  Eigen::MatrixXd dydl1 = dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad;
+  Eigen::MatrixXd dydl1 =
+      dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad_vec.asDiagonal();
 
   // The values in dydl1 must be backpropagated through the right kernels.
   //

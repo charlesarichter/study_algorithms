@@ -42,6 +42,10 @@ class InputOutputVolume {
 
   const std::vector<Eigen::MatrixXd>& GetVolume() const { return volume_; }
 
+  // TODO: Work towards a design that does not require this by being able to
+  // perform operations directly on InputOutputVolumes, including reshaping.
+  Eigen::VectorXd GetVolumeVec() const;
+
   std::vector<double> GetValues() const;
 
   // Assume that volume_ is populated and dimensionally consistent.
