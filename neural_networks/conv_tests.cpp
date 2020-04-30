@@ -50,14 +50,14 @@ void TestConvNetGradientsMultiConv() {
   const std::size_t stride = 1;
 
   // Randomly generate input.
-  const std::size_t num_channels_input = 1;
-  const std::size_t num_rows_input = 3;
-  const std::size_t num_cols_input = 3;
+  const std::size_t num_channels_input = 2;
+  const std::size_t num_rows_input = 5;
+  const std::size_t num_cols_input = 5;
   const InputOutputVolume input_volume = GetRandomInputOutputVolume(
       num_channels_input, num_rows_input, num_cols_input);
 
   // Randomly generate conv layer weights.
-  const std::size_t num_kernels = 1;
+  const std::size_t num_kernels = 3;
   const std::size_t num_rows_kernel = 2;
   const std::size_t num_cols_kernel = 2;
   const ConvKernels conv_kernels_1 = GetRandomConvKernels(
@@ -304,6 +304,9 @@ Eigen::VectorXd TestConvNetMultiConv(
   // Wrap values of dydl1 into a matrix where each row corresponds to a kernel.
   // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
   // the output of the network, is multidimensional).
+  //
+  // TODO: This reshaping should already be happening in
+  // ConvMatrixMultiplication for calculating dydl0 below.
   assert(dydl1.rows() == 1);
   Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
       dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
