@@ -210,6 +210,8 @@ Eigen::VectorXd TestConvNetMultiConv(
   const int padding = 0;
   const int stride = 1;
 
+  const std::size_t num_kernels_1 = conv_kernels_1.GetNumKernels();
+
   InputOutputVolume conv_0_output_post_act;
   InputOutputVolume conv_0_output_post_act_grad;
   std::vector<Eigen::MatrixXd> conv_0_input_mat;
@@ -293,23 +295,82 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   // The values in dydl1 must be backpropagated through the right kernels.
   //
-  // TODO: dydl1_cols should be evenly divisible by the number of channels of
-  // the l1 output volume (e.g., number of kernels in L1).
-  const std::size_t dydl1_cols = dydl1.cols();
-  const std::size_t num_kernels_1 = conv_kernels_1.GetNumKernels();
-  const std::size_t num_dydl1_per_kernel = dydl1_cols / num_kernels_1;
-  assert(dydl1_cols % num_kernels_1 == 0);
-  assert(num_dydl1_per_kernel == conv_1_input_mat.front().cols());
-
-  // Wrap values of dydl1 into a matrix where each row corresponds to a kernel.
-  // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
-  // the output of the network, is multidimensional).
+  // // TODO: dydl1_cols should be evenly divisible by the number of channels of
+  // // the l1 output volume (e.g., number of kernels in L1).
+  // const std::size_t dydl1_cols = dydl1.cols();
+  // const std::size_t num_kernels_1 = conv_kernels_1.GetNumKernels();
+  // const std::size_t num_dydl1_per_kernel = dydl1_cols / num_kernels_1;
+  // assert(dydl1_cols % num_kernels_1 == 0);
+  // assert(num_dydl1_per_kernel == conv_1_input_mat.front().cols());
   //
-  // TODO: This reshaping should already be happening in
-  // ConvMatrixMultiplication for calculating dydl0 below.
-  assert(dydl1.rows() == 1);
-  Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
-      dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
+  // // Wrap values of dydl1 into a matrix where each row corresponds to a
+  // kernel.
+  // // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
+  // // the output of the network, is multidimensional).
+  // //
+  // // TODO: This reshaping should already be happening in
+  // // ConvMatrixMultiplication for calculating dydl0 below.
+  // assert(dydl1.rows() == 1);
+  // Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
+  //     dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
+
+  // // Don't forget that this is also a convolution!
+  // // TODO: See if we can avoid looping over kernels if we can compute
+  // // convolution with each kernel simultaneously via matrix multiplication,
+  // // whether the unrolled weight/kernel vector is a matrix of unrolled
+  // kernels
+  // // stacked together.
+  // std::vector<Eigen::MatrixXd> dydw1_kernels;
+  // for (std::size_t i = 0; i < num_kernels_1; ++i) {
+  //   dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
+  // }
+  //
+  // if (print) {
+  //   std::cerr << "dydw1" << std::endl;
+  //   for (const auto& dydw : dydw1_kernels) {
+  //     std::cerr << dydw << std::endl;
+  //     std::cerr << std::endl;
+  //   }
+  // }
+
+  // Don't forget that this is also a convolution!
+  // TODO: Only works with single channel.
+  // Eigen::MatrixXd dydw1 = dydl1 * conv_1_input_mat.front().transpose();
+
+  // The values in dydl1 must be backpropagated through the right kernels, so we
+  // need to reshape elements of dydl1 correctly to work with them as kernels.
+  //
+  // Reshape dydl1 into a single conv kernel.
+  std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl1(1);
+  {
+    // TODO: dydl1_cols should be evenly divisible by the number of channels of
+    // the l1 output volume (e.g., number of kernels in L1).
+    const std::size_t dydl1_cols = dydl1.cols();
+    const std::size_t num_dydl1_per_kernel = dydl1_cols / num_kernels_1;
+    assert(dydl1_cols % num_kernels_1 == 0);
+    assert(num_dydl1_per_kernel == conv_1_input_mat.front().cols());
+
+    // Wrap values of dydl1 into a matrix where each row corresponds to a kernel
+    // (or rather a kernel channel).
+    //
+    // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
+    // the output of the network, is multidimensional), but this should not be a
+    // problem if we're computing gradients w.r.t. a scalar loss.
+    //
+    // TODO: This reshaping should already be happening in
+    // ConvMatrixMultiplication for calculating dydl0 below.
+    assert(dydl1.rows() == 1);
+    Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
+        dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
+
+    // Wrap each column of dydl1_wrapped into a kernel channel shape.
+    for (std::size_t i = 0; i < num_kernels_1; ++i) {
+      Eigen::VectorXd a = dydl1_wrapped.col(i);
+      Eigen::MatrixXd b = Eigen::Map<Eigen::MatrixXd>(
+          a.data(), num_steps_vertical_1, num_steps_horizontal_1);
+      output_volume_dydl1.front().emplace_back(b);
+    }
+  }
 
   // Don't forget that this is also a convolution!
   // TODO: See if we can avoid looping over kernels if we can compute
@@ -317,8 +378,28 @@ Eigen::VectorXd TestConvNetMultiConv(
   // whether the unrolled weight/kernel vector is a matrix of unrolled kernels
   // stacked together.
   std::vector<Eigen::MatrixXd> dydw1_kernels;
-  for (std::size_t i = 0; i < num_kernels_1; ++i) {
-    dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
+  {
+    // What we are doing here is individually convolving each channel of
+    // conv_0_output_post_act with each "channel" of dydl1.
+    //
+    // This same operation can also be accomplished as follows:
+    // for (std::size_t i = 0; i < num_kernels_1; ++i) {
+    //   dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
+    // }
+    const auto& v = conv_0_output_post_act.GetVolume();
+    for (int i = 0; i < v.size(); ++i) {
+      for (int j = 0; j < output_volume_dydl1.front().size(); ++j) {
+        std::vector<Eigen::MatrixXd> output_volume_iteration;
+        const std::vector<double> biases{0};
+        std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
+        ConvMatrixMultiplication(
+            {v.at(i)}, {{output_volume_dydl1.front().at(j)}}, biases, 0, 1,
+            &output_volume_iteration, &input_channels_unrolled_return);
+        for (const auto& o : output_volume_iteration) {
+          dydw1_kernels.emplace_back(o);
+        }
+      }
+    }
   }
 
   if (print) {
@@ -327,26 +408,6 @@ Eigen::VectorXd TestConvNetMultiConv(
       std::cerr << dydw << std::endl;
       std::cerr << std::endl;
     }
-  }
-
-  // Don't forget that this is also a convolution!
-  // TODO: Only works with single channel.
-  // Eigen::MatrixXd dydw1 = dydl1 * conv_1_input_mat.front().transpose();
-
-  // Reshape each column of dydl1_wrapped into a conv kernel.
-  std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl1;
-  {
-    std::vector<Eigen::MatrixXd> c;
-    for (std::size_t i = 0; i < num_kernels_1; ++i) {
-      Eigen::VectorXd a = dydl1_wrapped.col(i);
-      Eigen::MatrixXd b = Eigen::Map<Eigen::MatrixXd>(
-          a.data(), num_steps_vertical_1, num_steps_horizontal_1);
-      c.emplace_back(b);
-    }
-
-    // TODO: Double check that output_volume_dydl1 should always contain one
-    // kernel with a number of channels equal to num_kernels_1.
-    output_volume_dydl1.emplace_back(c);
   }
 
   // Compute dydl0
