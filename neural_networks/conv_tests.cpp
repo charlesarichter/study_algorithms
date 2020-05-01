@@ -285,57 +285,8 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   Eigen::MatrixXd dl2dl1 = l2_post_act_grad * W2;
 
-  // TODO: Only works with single channel.
-  // Eigen::MatrixXd dydw1 = dydl3 * dl3dl2 * dl2dl1 *
-  //                         conv_1_output_post_act_grad *
-  //                         conv_1_input_mat.front().transpose();
-
   Eigen::MatrixXd dydl1 =
       dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad_vec.asDiagonal();
-
-  // The values in dydl1 must be backpropagated through the right kernels.
-  //
-  // // TODO: dydl1_cols should be evenly divisible by the number of channels of
-  // // the l1 output volume (e.g., number of kernels in L1).
-  // const std::size_t dydl1_cols = dydl1.cols();
-  // const std::size_t num_kernels_1 = conv_kernels_1.GetNumKernels();
-  // const std::size_t num_dydl1_per_kernel = dydl1_cols / num_kernels_1;
-  // assert(dydl1_cols % num_kernels_1 == 0);
-  // assert(num_dydl1_per_kernel == conv_1_input_mat.front().cols());
-  //
-  // // Wrap values of dydl1 into a matrix where each row corresponds to a
-  // kernel.
-  // // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
-  // // the output of the network, is multidimensional).
-  // //
-  // // TODO: This reshaping should already be happening in
-  // // ConvMatrixMultiplication for calculating dydl0 below.
-  // assert(dydl1.rows() == 1);
-  // Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
-  //     dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
-
-  // // Don't forget that this is also a convolution!
-  // // TODO: See if we can avoid looping over kernels if we can compute
-  // // convolution with each kernel simultaneously via matrix multiplication,
-  // // whether the unrolled weight/kernel vector is a matrix of unrolled
-  // kernels
-  // // stacked together.
-  // std::vector<Eigen::MatrixXd> dydw1_kernels;
-  // for (std::size_t i = 0; i < num_kernels_1; ++i) {
-  //   dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
-  // }
-  //
-  // if (print) {
-  //   std::cerr << "dydw1" << std::endl;
-  //   for (const auto& dydw : dydw1_kernels) {
-  //     std::cerr << dydw << std::endl;
-  //     std::cerr << std::endl;
-  //   }
-  // }
-
-  // Don't forget that this is also a convolution!
-  // TODO: Only works with single channel.
-  // Eigen::MatrixXd dydw1 = dydl1 * conv_1_input_mat.front().transpose();
 
   // The values in dydl1 must be backpropagated through the right kernels, so we
   // need to reshape elements of dydl1 correctly to work with them as kernels.
