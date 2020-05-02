@@ -211,6 +211,7 @@ Eigen::VectorXd TestConvNetMultiConv(
   const int stride = 1;
 
   const std::size_t num_kernels_1 = conv_kernels_1.GetNumKernels();
+  const std::size_t num_kernels_0 = conv_kernels_0.GetNumKernels();
 
   InputOutputVolume conv_0_output_post_act;
   InputOutputVolume conv_0_output_post_act_grad;
@@ -351,13 +352,12 @@ Eigen::VectorXd TestConvNetMultiConv(
         }
       }
     }
-  }
-
-  if (print) {
-    std::cerr << "dydw1" << std::endl;
-    for (const auto& dydw : dydw1_kernels) {
-      std::cerr << dydw << std::endl;
-      std::cerr << std::endl;
+    if (print) {
+      std::cerr << "dydw1" << std::endl;
+      for (const auto& dydw : dydw1_kernels) {
+        std::cerr << dydw << std::endl;
+        std::cerr << std::endl;
+      }
     }
   }
 
@@ -434,30 +434,6 @@ Eigen::VectorXd TestConvNetMultiConv(
     output_volume_dydl0_post_act = dydl0_iov_post_act.GetVolume();
   }
 
-  // Wrap conv_0_output_post_act into a matrix of stacked columns, where
-  // each column corresponds to a kernel and multiply it by each element of
-  // conv_0_input_mat in a loop.
-  const std::size_t num_kernels_0 = conv_kernels_0.GetNumKernels();
-  Eigen::MatrixXd dydl0_wrapped = Eigen::MatrixXd::Zero(
-      output_volume_dydl0_post_act.front().size(), num_kernels_0);
-  for (int i = 0; i < output_volume_dydl0_post_act.size(); ++i) {
-    const Eigen::MatrixXd& m = output_volume_dydl0_post_act.at(i);
-    dydl0_wrapped.col(i) =
-        Eigen::Map<const Eigen::VectorXd>(m.data(), m.size());
-  }
-
-  std::vector<Eigen::MatrixXd> dydw0_kernels;
-  for (int i = 0; i < conv_0_input_mat.size(); ++i) {
-    dydw0_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
-  }
-  if (print) {
-    std::cerr << "dydw0" << std::endl;
-    for (const auto& dydw : dydw0_kernels) {
-      std::cerr << dydw << std::endl;
-      std::cerr << std::endl;
-    }
-  }
-
   // Convert output_volume_dydl0 container to an input/output volume
   std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
       output_volume_dydl0_post_act};
@@ -511,6 +487,43 @@ Eigen::VectorXd TestConvNetMultiConv(
                                                .reverse()
                                                .colwise()
                                                .reverse());
+    }
+  }
+
+  // Don't forget that this is also a convolution!
+  // TODO: See if we can avoid looping over kernels if we can compute
+  // convolution with each kernel simultaneously via matrix multiplication,
+  // whether the unrolled weight/kernel vector is a matrix of unrolled kernels
+  // stacked together.
+  std::vector<Eigen::MatrixXd> dydw0_kernels;
+  {
+    // What we are doing here is individually convolving each channel of
+    // input_volume with each "channel" of dydl0.
+    //
+    // This same operation can also be accomplished as follows:
+    // for (std::size_t i = 0; i < num_kernels_0; ++i) {
+    //   dydw0_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
+    // }
+    const auto& v = input_volume.GetVolume();
+    for (int i = 0; i < v.size(); ++i) {
+      for (int j = 0; j < output_volume_dydl0_expanded.front().size(); ++j) {
+        std::vector<Eigen::MatrixXd> output_volume_iteration;
+        const std::vector<double> biases{0};
+        std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
+        ConvMatrixMultiplication(
+            {v.at(i)}, {{output_volume_dydl0_expanded.front().at(j)}}, biases,
+            0, 1, &output_volume_iteration, &input_channels_unrolled_return);
+        for (const auto& o : output_volume_iteration) {
+          dydw0_kernels.emplace_back(o);
+        }
+      }
+    }
+    if (print) {
+      std::cerr << "dydw0" << std::endl;
+      for (const auto& dydw : dydw0_kernels) {
+        std::cerr << dydw << std::endl;
+        std::cerr << std::endl;
+      }
     }
   }
 
