@@ -293,7 +293,7 @@ Eigen::VectorXd TestConvNetMultiConv(
   // need to reshape elements of dydl1 correctly to work with them as kernels.
   //
   // Reshape dydl1 into a single conv kernel.
-  std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl1(1);
+  std::vector<Eigen::MatrixXd> output_volume_dydl1;
   {
     // TODO: dydl1_cols should be evenly divisible by the number of channels of
     // the l1 output volume (e.g., number of kernels in L1).
@@ -320,7 +320,7 @@ Eigen::VectorXd TestConvNetMultiConv(
       Eigen::VectorXd a = dydl1_wrapped.col(i);
       Eigen::MatrixXd b = Eigen::Map<Eigen::MatrixXd>(
           a.data(), num_steps_vertical_1, num_steps_horizontal_1);
-      output_volume_dydl1.front().emplace_back(b);
+      output_volume_dydl1.emplace_back(b);
     }
   }
 
@@ -340,13 +340,13 @@ Eigen::VectorXd TestConvNetMultiConv(
     // }
     const auto& v = conv_0_output_post_act.GetVolume();
     for (int i = 0; i < v.size(); ++i) {
-      for (int j = 0; j < output_volume_dydl1.front().size(); ++j) {
+      for (int j = 0; j < output_volume_dydl1.size(); ++j) {
         std::vector<Eigen::MatrixXd> output_volume_iteration;
         const std::vector<double> biases{0};
         std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-        ConvMatrixMultiplication(
-            {v.at(i)}, {{output_volume_dydl1.front().at(j)}}, biases, 0, 1,
-            &output_volume_iteration, &input_channels_unrolled_return);
+        ConvMatrixMultiplication({v.at(i)}, {{output_volume_dydl1.at(j)}},
+                                 biases, 0, 1, &output_volume_iteration,
+                                 &input_channels_unrolled_return);
         for (const auto& o : output_volume_iteration) {
           dydw1_kernels.emplace_back(o);
         }
@@ -370,6 +370,9 @@ Eigen::VectorXd TestConvNetMultiConv(
   // dydl0 will have depth (num channels) equal to the number of L1 kernels (N).
   std::vector<Eigen::MatrixXd> output_volume_dydl0;
   {
+    // Before effect of activation gradient.
+    std::vector<Eigen::MatrixXd> output_volume_dydl0_pre_act;
+
     // For each kernel in conv_kernels_1, perform convolution.
     const std::vector<std::vector<Eigen::MatrixXd>>& ck1 =
         conv_kernels_1.GetKernels();
@@ -385,7 +388,7 @@ Eigen::VectorXd TestConvNetMultiConv(
             ck111.rowwise().reverse().colwise().reverse());
       }
 
-      assert(output_volume_dydl1.front().size() == input_volume_foo.size());
+      assert(output_volume_dydl1.size() == input_volume_foo.size());
 
       std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
       const std::vector<double> biases{0};
@@ -395,48 +398,44 @@ Eigen::VectorXd TestConvNetMultiConv(
       // assert(f.rows() == f.cols());
       // assert(dydl1_reshaped.rows() == dydl1_reshaped.cols());
 
-      const std::size_t conv_kernels_rows =
-          output_volume_dydl1.front().front().rows();
-      const std::size_t conv_kernels_cols =
-          output_volume_dydl1.front().front().cols();
+      const std::size_t conv_kernels_rows = output_volume_dydl1.front().rows();
+      const std::size_t conv_kernels_cols = output_volume_dydl1.front().cols();
+
+      // Package dydl1 as a kernel for conv rather than input/output volume.
+      std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl1_kernel{
+          output_volume_dydl1};
 
       // NOTE: "Full convolution" involves sweeping the filter all the way
       // across, max possible overlap, which can be achieved by doing a
       // "normal" convolution with a padded input.
       std::vector<Eigen::MatrixXd> output_volume_iteration;
       const std::size_t full_conv_padding = conv_kernels_rows - 1;
-      ConvMatrixMultiplication(input_volume_foo, output_volume_dydl1, biases,
-                               full_conv_padding, 1, &output_volume_iteration,
+      ConvMatrixMultiplication(input_volume_foo, output_volume_dydl1_kernel,
+                               biases, full_conv_padding, 1,
+                               &output_volume_iteration,
                                &input_channels_unrolled_return);
 
       // Is it true that this will always be a single "channel"? This number
       // is the number of "kernels" (dydl1
       assert(output_volume_iteration.size() == 1);
-      output_volume_dydl0.emplace_back(output_volume_iteration.front()
-                                           .rowwise()
-                                           .reverse()
-                                           .colwise()
-                                           .reverse());
+      output_volume_dydl0_pre_act.emplace_back(output_volume_iteration.front()
+                                                   .rowwise()
+                                                   .reverse()
+                                                   .colwise()
+                                                   .reverse());
     }
-  }
 
-  // Multiply dydl0 with conv_0_output_post_act_grad.
-  std::vector<Eigen::MatrixXd> output_volume_dydl0_post_act;
-  {
-    // TODO: Have previous stage output an InputOutputVolume directly.
-    const InputOutputVolume dydl0_iov(output_volume_dydl0);
-
-    // Element-wise product.
+    // Incorporate the effect of the activation gradient.
+    // TODO: It seems weird that this step comes after the convolution...
+    const InputOutputVolume dydl0_iov(output_volume_dydl0_pre_act);
     const InputOutputVolume dydl0_iov_post_act =
-        conv_0_output_post_act_grad * dydl0_iov;
-
-    // Copy volume to output. TODO: Eliminate unnecesary copy.
-    output_volume_dydl0_post_act = dydl0_iov_post_act.GetVolume();
+        conv_0_output_post_act_grad * dydl0_iov;  // Element-wise product.
+    output_volume_dydl0 = dydl0_iov_post_act.GetVolume();
   }
 
-  // Convert output_volume_dydl0 container to an input/output volume
-  std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
-      output_volume_dydl0_post_act};
+  // // Convert output_volume_dydl0 container to an input/output volume
+  // std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
+  //     output_volume_dydl0_post_act};
 
   std::vector<Eigen::MatrixXd> output_volume_dydlinput;
   {
@@ -455,7 +454,11 @@ Eigen::VectorXd TestConvNetMultiConv(
             ck000.rowwise().reverse().colwise().reverse());
       }
 
-      assert(output_volume_dydl0_expanded.front().size() ==
+      // Package dydl1 as a kernel for conv rather than input/output volume.
+      std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_kernel{
+          output_volume_dydl0};
+
+      assert(output_volume_dydl0_kernel.front().size() ==
              input_volume_foo.size());
 
       std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
@@ -465,16 +468,16 @@ Eigen::VectorXd TestConvNetMultiConv(
       // padding required for a full convolution.
 
       const std::size_t conv_kernels_rows =
-          output_volume_dydl0_expanded.front().front().rows();
+          output_volume_dydl0_kernel.front().front().rows();
       const std::size_t conv_kernels_cols =
-          output_volume_dydl0_expanded.front().front().cols();
+          output_volume_dydl0_kernel.front().front().cols();
 
       // NOTE: "Full convolution" involves sweeping the filter all the way
       // across, max possible overlap, which can be achieved by doing a
       // "normal" convolution with a padded input.
       std::vector<Eigen::MatrixXd> output_volume_iteration;
       const std::size_t full_conv_padding = conv_kernels_rows - 1;
-      ConvMatrixMultiplication(input_volume_foo, output_volume_dydl0_expanded,
+      ConvMatrixMultiplication(input_volume_foo, output_volume_dydl0_kernel,
                                biases, full_conv_padding, 1,
                                &output_volume_iteration,
                                &input_channels_unrolled_return);
@@ -506,13 +509,13 @@ Eigen::VectorXd TestConvNetMultiConv(
     // }
     const auto& v = input_volume.GetVolume();
     for (int i = 0; i < v.size(); ++i) {
-      for (int j = 0; j < output_volume_dydl0_expanded.front().size(); ++j) {
+      for (int j = 0; j < output_volume_dydl0.size(); ++j) {
         std::vector<Eigen::MatrixXd> output_volume_iteration;
         const std::vector<double> biases{0};
         std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-        ConvMatrixMultiplication(
-            {v.at(i)}, {{output_volume_dydl0_expanded.front().at(j)}}, biases,
-            0, 1, &output_volume_iteration, &input_channels_unrolled_return);
+        ConvMatrixMultiplication({v.at(i)}, {{output_volume_dydl0.at(j)}},
+                                 biases, 0, 1, &output_volume_iteration,
+                                 &input_channels_unrolled_return);
         for (const auto& o : output_volume_iteration) {
           dydw0_kernels.emplace_back(o);
         }
