@@ -361,137 +361,23 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  // Compute dydl0
-  //
-  // Convolve L1 kernels (input) with dydl1 gradients (kernels)
-  //
-  // We have N L1 kernels, each with M channels.
-  //
-  // dydl0 will have depth (num channels) equal to the number of L1 kernels (N).
-  std::vector<Eigen::MatrixXd> output_volume_dydl0;
-  {
-    // Before effect of activation gradient.
-    std::vector<Eigen::MatrixXd> output_volume_dydl0_pre_act;
+  const std::vector<Eigen::MatrixXd> output_volume_dydl0_pre_act =
+      ConvGradient(conv_kernels_1, output_volume_dydl1);
 
-    // For each kernel in conv_kernels_1, perform convolution.
-    const std::vector<std::vector<Eigen::MatrixXd>>& ck1 =
-        conv_kernels_1.GetKernels();
-    const std::size_t num_channels_per_kernel_1 = ck1.front().size();
-
-    // TODO: Either of these loops over channels or kernels may need to reverse
-    // (just as we flipped the filters themselves)...or not.
-    for (std::size_t j = 0; j < num_channels_per_kernel_1; ++j) {
-      std::vector<Eigen::MatrixXd> input_volume_foo;
-      for (std::size_t i = 0; i < num_kernels_1; ++i) {
-        const Eigen::MatrixXd& ck111 = ck1.at(i).at(j);
-        input_volume_foo.emplace_back(
-            ck111.rowwise().reverse().colwise().reverse());
-      }
-
-      assert(output_volume_dydl1.size() == input_volume_foo.size());
-
-      std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-      const std::vector<double> biases{0};
-
-      // TODO: Currently only works with square kernels and inputs due to the
-      // padding required for a full convolution.
-      // assert(f.rows() == f.cols());
-      // assert(dydl1_reshaped.rows() == dydl1_reshaped.cols());
-
-      const std::size_t conv_kernels_rows = output_volume_dydl1.front().rows();
-      const std::size_t conv_kernels_cols = output_volume_dydl1.front().cols();
-
-      // Package dydl1 as a kernel for conv rather than input/output volume.
-      std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl1_kernel{
-          output_volume_dydl1};
-
-      // NOTE: "Full convolution" involves sweeping the filter all the way
-      // across, max possible overlap, which can be achieved by doing a
-      // "normal" convolution with a padded input.
-      std::vector<Eigen::MatrixXd> output_volume_iteration;
-      const std::size_t full_conv_padding = conv_kernels_rows - 1;
-      ConvMatrixMultiplication(input_volume_foo, output_volume_dydl1_kernel,
-                               biases, full_conv_padding, 1,
-                               &output_volume_iteration,
-                               &input_channels_unrolled_return);
-
-      // Is it true that this will always be a single "channel"? This number
-      // is the number of "kernels" (dydl1
-      assert(output_volume_iteration.size() == 1);
-      output_volume_dydl0_pre_act.emplace_back(output_volume_iteration.front()
-                                                   .rowwise()
-                                                   .reverse()
-                                                   .colwise()
-                                                   .reverse());
-    }
-
-    // Incorporate the effect of the activation gradient.
-    // TODO: It seems weird that this step comes after the convolution...
-    const InputOutputVolume dydl0_iov(output_volume_dydl0_pre_act);
-    const InputOutputVolume dydl0_iov_post_act =
-        conv_0_output_post_act_grad * dydl0_iov;  // Element-wise product.
-    output_volume_dydl0 = dydl0_iov_post_act.GetVolume();
-  }
+  // Incorporate the effect of the activation gradient.
+  // TODO: It seems weird that this step comes after the convolution...
+  const InputOutputVolume dydl0_iov(output_volume_dydl0_pre_act);
+  const InputOutputVolume dydl0_iov_post_act =
+      conv_0_output_post_act_grad * dydl0_iov;  // Element-wise product.
+  const std::vector<Eigen::MatrixXd> output_volume_dydl0 =
+      dydl0_iov_post_act.GetVolume();
 
   // // Convert output_volume_dydl0 container to an input/output volume
   // std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
   //     output_volume_dydl0_post_act};
 
-  std::vector<Eigen::MatrixXd> output_volume_dydlinput;
-  {
-    // For each kernel in conv_kernels_1, perform convolution.
-    const std::vector<std::vector<Eigen::MatrixXd>>& ck0 =
-        conv_kernels_0.GetKernels();
-    const std::size_t num_channels_per_kernel_0 = ck0.front().size();
-
-    // TODO: Either of these loops over channels or kernels may need to reverse
-    // (just as we flipped the filters themselves)...or not.
-    for (std::size_t j = 0; j < num_channels_per_kernel_0; ++j) {
-      std::vector<Eigen::MatrixXd> input_volume_foo;
-      for (std::size_t i = 0; i < num_kernels_0; ++i) {
-        const Eigen::MatrixXd& ck000 = ck0.at(i).at(j);
-        input_volume_foo.emplace_back(
-            ck000.rowwise().reverse().colwise().reverse());
-      }
-
-      // Package dydl1 as a kernel for conv rather than input/output volume.
-      std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_kernel{
-          output_volume_dydl0};
-
-      assert(output_volume_dydl0_kernel.front().size() ==
-             input_volume_foo.size());
-
-      std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-      const std::vector<double> biases{0};
-
-      // TODO: Currently only works with square kernels and inputs due to the
-      // padding required for a full convolution.
-
-      const std::size_t conv_kernels_rows =
-          output_volume_dydl0_kernel.front().front().rows();
-      const std::size_t conv_kernels_cols =
-          output_volume_dydl0_kernel.front().front().cols();
-
-      // NOTE: "Full convolution" involves sweeping the filter all the way
-      // across, max possible overlap, which can be achieved by doing a
-      // "normal" convolution with a padded input.
-      std::vector<Eigen::MatrixXd> output_volume_iteration;
-      const std::size_t full_conv_padding = conv_kernels_rows - 1;
-      ConvMatrixMultiplication(input_volume_foo, output_volume_dydl0_kernel,
-                               biases, full_conv_padding, 1,
-                               &output_volume_iteration,
-                               &input_channels_unrolled_return);
-
-      // Is it true that this will always be a single "channel"? This number
-      // is the number of "kernels" (dydl0
-      assert(output_volume_iteration.size() == 1);
-      output_volume_dydlinput.emplace_back(output_volume_iteration.front()
-                                               .rowwise()
-                                               .reverse()
-                                               .colwise()
-                                               .reverse());
-    }
-  }
+  const std::vector<Eigen::MatrixXd> output_volume_dydlinput =
+      ConvGradient(conv_kernels_0, output_volume_dydl0);
 
   // Don't forget that this is also a convolution!
   // TODO: See if we can avoid looping over kernels if we can compute
