@@ -69,3 +69,10 @@ void ConvMatrixMultiplication(
     const std::vector<double>& biases, const int padding, const int stride,
     std::vector<Eigen::MatrixXd>* output_volume,
     std::vector<Eigen::MatrixXd>* input_channels_unrolled_return);
+
+/**
+ * TODO: Documentation.
+ */
+std::vector<Eigen::MatrixXd> ConvGradient(
+    const ConvKernels& conv_kernels,
+    const std::vector<Eigen::MatrixXd>& next_grad);

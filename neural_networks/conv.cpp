@@ -229,3 +229,51 @@ void ConvMatrixMultiplication(
   // TODO: Find a better way to do this, or better yet, just return gradient.
   *input_channels_unrolled_return = input_channels_unrolled;
 }
+
+std::vector<Eigen::MatrixXd> ConvGradient(
+    const ConvKernels& conv_kernels,
+    const std::vector<Eigen::MatrixXd>& next_grad) {
+  const std::vector<std::vector<Eigen::MatrixXd>>& kernels =
+      conv_kernels.GetKernels();
+  const std::size_t num_kernels = kernels.size();
+  const std::size_t num_channels_per_kernel = kernels.front().size();
+
+  std::vector<Eigen::MatrixXd> output_volume;
+
+  // For each kernel in conv_kernels, perform convolution.
+  for (std::size_t j = 0; j < num_channels_per_kernel; ++j) {
+    std::vector<Eigen::MatrixXd> input_volume;
+    for (std::size_t i = 0; i < num_kernels; ++i) {
+      // Unpack the jth channel of the ith kernel.
+      const Eigen::MatrixXd& kernel_channel = kernels.at(i).at(j);
+      input_volume.emplace_back(
+          kernel_channel.rowwise().reverse().colwise().reverse());
+    }
+    assert(next_grad.size() == input_volume.size());
+
+    // TODO: Currently only works with square kernels and inputs due to the
+    // padding required for a full convolution.
+    const std::size_t conv_kernels_rows = next_grad.front().rows();
+    const std::size_t conv_kernels_cols = next_grad.front().cols();
+
+    // NOTE: "Full convolution" involves sweeping the filter all the way
+    // across, max possible overlap, which can be achieved by doing a
+    // "normal" convolution with a padded input.
+    std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
+    std::vector<Eigen::MatrixXd> output_volume_iteration;
+    const std::size_t full_conv_padding = conv_kernels_rows - 1;
+    ConvMatrixMultiplication(
+        input_volume, std::vector<std::vector<Eigen::MatrixXd>>{next_grad}, {0},
+        full_conv_padding, 1, &output_volume_iteration,
+        &input_channels_unrolled_return);
+
+    // Is it true that this will always be a single "channel" output?
+    assert(output_volume_iteration.size() == 1);
+    output_volume.emplace_back(output_volume_iteration.front()
+                                   .rowwise()
+                                   .reverse()
+                                   .colwise()
+                                   .reverse());
+  }
+  return output_volume;
+}
