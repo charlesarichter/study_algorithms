@@ -76,3 +76,7 @@ void ConvMatrixMultiplication(
 std::vector<Eigen::MatrixXd> ConvGradient(
     const ConvKernels& conv_kernels,
     const std::vector<Eigen::MatrixXd>& next_grad);
+
+std::vector<Eigen::MatrixXd> ConvWeightGradient(
+    const std::vector<Eigen::MatrixXd>& input_volume,
+    const std::vector<Eigen::MatrixXd>& next_grad);
