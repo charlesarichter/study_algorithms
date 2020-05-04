@@ -324,42 +324,8 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  // Don't forget that this is also a convolution!
-  // TODO: See if we can avoid looping over kernels if we can compute
-  // convolution with each kernel simultaneously via matrix multiplication,
-  // whether the unrolled weight/kernel vector is a matrix of unrolled kernels
-  // stacked together.
-  std::vector<Eigen::MatrixXd> dydw1_kernels;
-  {
-    // What we are doing here is individually convolving each channel of
-    // conv_0_output_post_act with each "channel" of dydl1.
-    //
-    // This same operation can also be accomplished as follows:
-    // for (std::size_t i = 0; i < num_kernels_1; ++i) {
-    //   dydw1_kernels.emplace_back(conv_1_input_mat.at(i) * dydl1_wrapped);
-    // }
-    const auto& v = conv_0_output_post_act.GetVolume();
-    for (int i = 0; i < v.size(); ++i) {
-      for (int j = 0; j < output_volume_dydl1.size(); ++j) {
-        std::vector<Eigen::MatrixXd> output_volume_iteration;
-        const std::vector<double> biases{0};
-        std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-        ConvMatrixMultiplication({v.at(i)}, {{output_volume_dydl1.at(j)}},
-                                 biases, 0, 1, &output_volume_iteration,
-                                 &input_channels_unrolled_return);
-        for (const auto& o : output_volume_iteration) {
-          dydw1_kernels.emplace_back(o);
-        }
-      }
-    }
-    if (print) {
-      std::cerr << "dydw1" << std::endl;
-      for (const auto& dydw : dydw1_kernels) {
-        std::cerr << dydw << std::endl;
-        std::cerr << std::endl;
-      }
-    }
-  }
+  const std::vector<Eigen::MatrixXd> dydw1_kernels = ConvWeightGradient(
+      conv_0_output_post_act.GetVolume(), output_volume_dydl1);
 
   const std::vector<Eigen::MatrixXd> output_volume_dydl0_pre_act =
       ConvGradient(conv_kernels_1, output_volume_dydl1);
@@ -372,47 +338,25 @@ Eigen::VectorXd TestConvNetMultiConv(
   const std::vector<Eigen::MatrixXd> output_volume_dydl0 =
       dydl0_iov_post_act.GetVolume();
 
-  // // Convert output_volume_dydl0 container to an input/output volume
-  // std::vector<std::vector<Eigen::MatrixXd>> output_volume_dydl0_expanded{
-  //     output_volume_dydl0_post_act};
-
   const std::vector<Eigen::MatrixXd> output_volume_dydlinput =
       ConvGradient(conv_kernels_0, output_volume_dydl0);
 
-  // Don't forget that this is also a convolution!
-  // TODO: See if we can avoid looping over kernels if we can compute
-  // convolution with each kernel simultaneously via matrix multiplication,
-  // whether the unrolled weight/kernel vector is a matrix of unrolled kernels
-  // stacked together.
-  std::vector<Eigen::MatrixXd> dydw0_kernels;
-  {
-    // What we are doing here is individually convolving each channel of
-    // input_volume with each "channel" of dydl0.
-    //
-    // This same operation can also be accomplished as follows:
-    // for (std::size_t i = 0; i < num_kernels_0; ++i) {
-    //   dydw0_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
-    // }
-    const auto& v = input_volume.GetVolume();
-    for (int i = 0; i < v.size(); ++i) {
-      for (int j = 0; j < output_volume_dydl0.size(); ++j) {
-        std::vector<Eigen::MatrixXd> output_volume_iteration;
-        const std::vector<double> biases{0};
-        std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
-        ConvMatrixMultiplication({v.at(i)}, {{output_volume_dydl0.at(j)}},
-                                 biases, 0, 1, &output_volume_iteration,
-                                 &input_channels_unrolled_return);
-        for (const auto& o : output_volume_iteration) {
-          dydw0_kernels.emplace_back(o);
-        }
-      }
+  const std::vector<Eigen::MatrixXd> dydw0_kernels =
+      ConvWeightGradient(input_volume.GetVolume(), output_volume_dydl0);
+
+  if (print) {
+    std::cerr << "dydw1" << std::endl;
+    for (const auto& dydw : dydw1_kernels) {
+      std::cerr << dydw << std::endl;
+      std::cerr << std::endl;
     }
-    if (print) {
-      std::cerr << "dydw0" << std::endl;
-      for (const auto& dydw : dydw0_kernels) {
-        std::cerr << dydw << std::endl;
-        std::cerr << std::endl;
-      }
+  }
+
+  if (print) {
+    std::cerr << "dydw0" << std::endl;
+    for (const auto& dydw : dydw0_kernels) {
+      std::cerr << dydw << std::endl;
+      std::cerr << std::endl;
     }
   }
 
