@@ -271,6 +271,13 @@ Eigen::VectorXd TestConvNetMultiConv(
   const Eigen::VectorXd l3_post_act =
       Activation(l3_pre_act, ActivationFunction::SIGMOID, &l3_post_act_grad);
 
+  // Network:
+  // Pre/Post indicate before/after activation
+  //
+  //                l0pre   l0post   l1pre   l1post l2pre   l2post l3pre l3post
+  // Input -> Conv0 -> Act0 -> Conv1 -> Act1 -> Fc2 -> Act2 -> Fc3 -> Act3 -> Y
+  //          W0               W1               W2             W3
+
   // Compute gradients.
   Eigen::MatrixXd dydw3 = l3_post_act_grad * l2_post_act.transpose();
 
