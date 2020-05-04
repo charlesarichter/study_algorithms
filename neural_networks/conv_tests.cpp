@@ -274,7 +274,8 @@ Eigen::VectorXd TestConvNetMultiConv(
   // Network:
   // Pre/Post indicate before/after activation
   //
-  //                l0pre   l0post   l1pre   l1post l2pre   l2post l3pre l3post
+  //              l0pre   l0post   l1pre   l1post l2pre   l2post l3pre   l3post
+  //                |       |        |       |      |       |      |       |
   // Input -> Conv0 -> Act0 -> Conv1 -> Act1 -> Fc2 -> Act2 -> Fc3 -> Act3 -> Y
   //          W0               W1               W2             W3
 
