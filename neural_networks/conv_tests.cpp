@@ -292,13 +292,13 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   Eigen::MatrixXd dl3predl2post = W3;
 
-  Eigen::MatrixXd dl2predw2 = conv_1_output_post_act_vec;
-
   Eigen::MatrixXd dydl2post = dydl3pre * dl3predl2post;
 
   Eigen::MatrixXd dl2postdl2pre = l2_post_act_grad;
 
   Eigen::MatrixXd dydl2pre = dydl2post * dl2postdl2pre;
+
+  Eigen::MatrixXd dl2predw2 = conv_1_output_post_act_vec;
 
   Eigen::MatrixXd dydw2 = dl2predw2 * dydl2pre;
 
