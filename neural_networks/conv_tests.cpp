@@ -279,78 +279,97 @@ Eigen::VectorXd TestConvNetMultiConv(
   // Input -> Conv0 -> Act0 -> Conv1 -> Act1 -> Fc2 -> Act2 -> Fc3 -> Act3 -> Y
   //          W0               W1               W2             W3
 
-  // Compute gradients.
-  Eigen::MatrixXd dydw3 = l3_post_act_grad * l2_post_act.transpose();
-
-  Eigen::MatrixXd dydl3 =
+  Eigen::MatrixXd dydl3post =
       Eigen::MatrixXd::Identity(l3_post_act.size(), l3_post_act.size());
 
-  Eigen::MatrixXd dl3dl2 = l3_post_act_grad * W3;
+  Eigen::MatrixXd dl3postdl3pre = l3_post_act_grad;
+
+  Eigen::MatrixXd dydl3pre = dydl3post * dl3postdl3pre;
+
+  Eigen::MatrixXd dl3predw3 = l2_post_act.transpose();
+
+  Eigen::MatrixXd dydw3 = dydl3pre * dl3predw3;
+
+  Eigen::MatrixXd dl3predl2post = W3;
 
   // dy/dl2 = dy / dl3  * dl3 / dl2
   Eigen::MatrixXd dydw2 =
       conv_1_output_post_act_vec * l3_post_act_grad * W3 * l2_post_act_grad;
-  Eigen::MatrixXd dydl2 = dydl3 * dl3dl2;
 
-  Eigen::MatrixXd dl2dl1 = l2_post_act_grad * W2;
+  Eigen::MatrixXd dydl2post = dydl3pre * dl3predl2post;
 
-  Eigen::MatrixXd dydl1 =
-      dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad_vec.asDiagonal();
+  // Eigen::MatrixXd dl2dl1 = l2_post_act_grad * W2;
 
-  // The values in dydl1 must be backpropagated through the right kernels, so we
-  // need to reshape elements of dydl1 correctly to work with them as kernels.
+  Eigen::MatrixXd dl2postdl2pre = l2_post_act_grad;
+
+  Eigen::MatrixXd dydl2pre = dydl2post * dl2postdl2pre;
+
+  Eigen::MatrixXd dl2predl1post = W2;
+
+  Eigen::MatrixXd dydl1post = dydl2pre * dl2predl1post;
+
+  Eigen::MatrixXd dl1postdl1pre = conv_1_output_post_act_grad_vec.asDiagonal();
+
+  // Eigen::MatrixXd dydl1 =
+  //     dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad_vec.asDiagonal();
+
+  Eigen::MatrixXd dydl1pre = dydl1post * dl1postdl1pre;
+
+  // Eigen::MatrixXd dydl1 = dydl1pre;
+
+  // The values in dydl1pre must be backpropagated through the right kernels, so
+  // we need to reshape the elements correctly to work with them as kernels.
   //
-  // Reshape dydl1 into a single conv kernel.
-  std::vector<Eigen::MatrixXd> output_volume_dydl1;
+  // Reshape dydl1pre into a single conv kernel.
+  std::vector<Eigen::MatrixXd> dydl1pre_volume;
   {
     // TODO: dydl1_cols should be evenly divisible by the number of channels of
     // the l1 output volume (e.g., number of kernels in L1).
-    const std::size_t dydl1_cols = dydl1.cols();
+    const std::size_t dydl1_cols = dydl1pre.cols();
     const std::size_t num_dydl1_per_kernel = dydl1_cols / num_kernels_1;
     assert(dydl1_cols % num_kernels_1 == 0);
     assert(num_dydl1_per_kernel == conv_1_input_mat.front().cols());
 
-    // Wrap values of dydl1 into a matrix where each row corresponds to a kernel
-    // (or rather a kernel channel).
+    // Wrap values of dydl1pre into a matrix where each row corresponds to a
+    // kernel (or rather a kernel channel).
     //
-    // TODO: The wrapping below won't work if dydl1 has multiple rows (e.g., y,
-    // the output of the network, is multidimensional), but this should not be a
-    // problem if we're computing gradients w.r.t. a scalar loss.
+    // TODO: The wrapping below won't work if dydl1pre has multiple rows (e.g.,
+    // y, the output of the network, is multidimensional), but this should not
+    // be a problem if we're computing gradients w.r.t. a scalar loss.
     //
     // TODO: This reshaping should already be happening in
     // ConvMatrixMultiplication for calculating dydl0 below.
-    assert(dydl1.rows() == 1);
+    assert(dydl1pre.rows() == 1);
     Eigen::MatrixXd dydl1_wrapped = Eigen::Map<Eigen::MatrixXd>(
-        dydl1.data(), num_dydl1_per_kernel, num_kernels_1);
+        dydl1pre.data(), num_dydl1_per_kernel, num_kernels_1);
 
     // Wrap each column of dydl1_wrapped into a kernel channel shape.
     for (std::size_t i = 0; i < num_kernels_1; ++i) {
       Eigen::VectorXd a = dydl1_wrapped.col(i);
       Eigen::MatrixXd b = Eigen::Map<Eigen::MatrixXd>(
           a.data(), num_steps_vertical_1, num_steps_horizontal_1);
-      output_volume_dydl1.emplace_back(b);
+      dydl1pre_volume.emplace_back(b);
     }
   }
 
-  const std::vector<Eigen::MatrixXd> dydw1_kernels = ConvWeightGradient(
-      conv_0_output_post_act.GetVolume(), output_volume_dydl1);
+  const std::vector<Eigen::MatrixXd> dydw1_kernels =
+      ConvWeightGradient(conv_0_output_post_act.GetVolume(), dydl1pre_volume);
 
-  const std::vector<Eigen::MatrixXd> output_volume_dydl0_pre_act =
-      ConvGradient(conv_kernels_1, output_volume_dydl1);
+  const std::vector<Eigen::MatrixXd> dydl0post_volume =
+      ConvGradient(conv_kernels_1, dydl1pre_volume);
 
   // Incorporate the effect of the activation gradient.
   // TODO: It seems weird that this step comes after the convolution...
-  const InputOutputVolume dydl0_iov(output_volume_dydl0_pre_act);
-  const InputOutputVolume dydl0_iov_post_act =
-      conv_0_output_post_act_grad * dydl0_iov;  // Element-wise product.
-  const std::vector<Eigen::MatrixXd> output_volume_dydl0 =
-      dydl0_iov_post_act.GetVolume();
+  const InputOutputVolume dydl0post_iov(dydl0post_volume);
+  const InputOutputVolume dydl0pre_iov =
+      conv_0_output_post_act_grad * dydl0post_iov;  // Element-wise product.
+  const std::vector<Eigen::MatrixXd> dydl0pre_volume = dydl0pre_iov.GetVolume();
 
-  const std::vector<Eigen::MatrixXd> output_volume_dydlinput =
-      ConvGradient(conv_kernels_0, output_volume_dydl0);
+  const std::vector<Eigen::MatrixXd> dydlinput_volume =
+      ConvGradient(conv_kernels_0, dydl0pre_volume);
 
   const std::vector<Eigen::MatrixXd> dydw0_kernels =
-      ConvWeightGradient(input_volume.GetVolume(), output_volume_dydl0);
+      ConvWeightGradient(input_volume.GetVolume(), dydl0pre_volume);
 
   if (print) {
     std::cerr << "dydw1" << std::endl;
@@ -370,7 +389,7 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   if (print) {
     std::cerr << "dydlinput:" << std::endl;
-    for (const auto& d : output_volume_dydlinput) {
+    for (const auto& d : dydlinput_volume) {
       std::cerr << std::endl;
       std::cerr << d << std::endl;
     }
