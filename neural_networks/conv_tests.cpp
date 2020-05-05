@@ -286,23 +286,21 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   Eigen::MatrixXd dydl3pre = dydl3post * dl3postdl3pre;
 
-  Eigen::MatrixXd dl3predw3 = l2_post_act.transpose();
+  Eigen::MatrixXd dl3predw3 = l2_post_act;
 
-  Eigen::MatrixXd dydw3 = dydl3pre * dl3predw3;
+  Eigen::MatrixXd dydw3 = dl3predw3 * dydl3pre;
 
   Eigen::MatrixXd dl3predl2post = W3;
 
-  // dy/dl2 = dy / dl3  * dl3 / dl2
-  Eigen::MatrixXd dydw2 =
-      conv_1_output_post_act_vec * l3_post_act_grad * W3 * l2_post_act_grad;
+  Eigen::MatrixXd dl2predw2 = conv_1_output_post_act_vec;
 
   Eigen::MatrixXd dydl2post = dydl3pre * dl3predl2post;
-
-  // Eigen::MatrixXd dl2dl1 = l2_post_act_grad * W2;
 
   Eigen::MatrixXd dl2postdl2pre = l2_post_act_grad;
 
   Eigen::MatrixXd dydl2pre = dydl2post * dl2postdl2pre;
+
+  Eigen::MatrixXd dydw2 = dl2predw2 * dydl2pre;
 
   Eigen::MatrixXd dl2predl1post = W2;
 
@@ -310,12 +308,7 @@ Eigen::VectorXd TestConvNetMultiConv(
 
   Eigen::MatrixXd dl1postdl1pre = conv_1_output_post_act_grad_vec.asDiagonal();
 
-  // Eigen::MatrixXd dydl1 =
-  //     dydl3 * dl3dl2 * dl2dl1 * conv_1_output_post_act_grad_vec.asDiagonal();
-
   Eigen::MatrixXd dydl1pre = dydl1post * dl1postdl1pre;
-
-  // Eigen::MatrixXd dydl1 = dydl1pre;
 
   // The values in dydl1pre must be backpropagated through the right kernels, so
   // we need to reshape the elements correctly to work with them as kernels.
@@ -358,8 +351,6 @@ Eigen::VectorXd TestConvNetMultiConv(
   const std::vector<Eigen::MatrixXd> dydl0post_volume =
       ConvGradient(conv_kernels_1, dydl1pre_volume);
 
-  // Incorporate the effect of the activation gradient.
-  // TODO: It seems weird that this step comes after the convolution...
   const InputOutputVolume dydl0post_iov(dydl0post_volume);
   const InputOutputVolume dydl0pre_iov =
       conv_0_output_post_act_grad * dydl0post_iov;  // Element-wise product.
