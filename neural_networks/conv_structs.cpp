@@ -54,6 +54,11 @@ InputOutputVolume::InputOutputVolume(const std::vector<double>& values,
   }
 }
 
+Eigen::VectorXd InputOutputVolume::GetVolumeVec() const {
+  const std::vector<double> values = GetValues();  // TODO: Avoid this copy.
+  return Eigen::Map<const Eigen::VectorXd>(values.data(), values.size());
+}
+
 std::vector<double> InputOutputVolume::GetValues() const {
   std::vector<double> values;
   for (const Eigen::MatrixXd& channel : volume_) {
@@ -87,4 +92,21 @@ InputOutputVolume GetRandomInputOutputVolume(const std::size_t num_channels,
   std::generate(values.begin(), values.end(),
                 [&dist, &generator]() { return dist(generator); });
   return InputOutputVolume(values, num_channels, num_rows, num_cols);
+}
+
+InputOutputVolume operator*(const InputOutputVolume& volume_1,
+                            const InputOutputVolume& volume_2) {
+  assert(volume_1.GetNumChannels() == volume_2.GetNumChannels());
+  assert(volume_1.GetNumRows() == volume_2.GetNumRows());
+  assert(volume_1.GetNumCols() == volume_2.GetNumCols());
+
+  const std::vector<Eigen::MatrixXd>& v1 = volume_1.GetVolume();
+  const std::vector<Eigen::MatrixXd>& v2 = volume_2.GetVolume();
+
+  std::vector<Eigen::MatrixXd> v_result(v1.size());
+  for (std::size_t i = 0; i < v1.size(); ++i) {
+    v_result.at(i) = v1.at(i).cwiseProduct(v2.at(i));
+  }
+
+  return InputOutputVolume(v_result);
 }

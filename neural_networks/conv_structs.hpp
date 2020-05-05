@@ -42,6 +42,10 @@ class InputOutputVolume {
 
   const std::vector<Eigen::MatrixXd>& GetVolume() const { return volume_; }
 
+  // TODO: Work towards a design that does not require this by being able to
+  // perform operations directly on InputOutputVolumes, including reshaping.
+  Eigen::VectorXd GetVolumeVec() const;
+
   std::vector<double> GetValues() const;
 
   // Assume that volume_ is populated and dimensionally consistent.
@@ -67,3 +71,8 @@ ConvKernels GetRandomConvKernels(const std::size_t num_kernels,
 InputOutputVolume GetRandomInputOutputVolume(const std::size_t num_channels,
                                              const std::size_t num_rows,
                                              const std::size_t num_cols);
+
+// Element-wise product of InputOutputVolumes
+InputOutputVolume operator*(const InputOutputVolume& volume_1,
+                            const InputOutputVolume& volume_2);
+

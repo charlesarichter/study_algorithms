@@ -229,3 +229,86 @@ void ConvMatrixMultiplication(
   // TODO: Find a better way to do this, or better yet, just return gradient.
   *input_channels_unrolled_return = input_channels_unrolled;
 }
+
+std::vector<Eigen::MatrixXd> ConvGradient(
+    const ConvKernels& conv_kernels,
+    const std::vector<Eigen::MatrixXd>& next_grad) {
+  const std::vector<std::vector<Eigen::MatrixXd>>& kernels =
+      conv_kernels.GetKernels();
+  const std::size_t num_kernels = kernels.size();
+  const std::size_t num_channels_per_kernel = kernels.front().size();
+
+  std::vector<Eigen::MatrixXd> output_volume;
+
+  // For each kernel in conv_kernels, perform convolution.
+  for (std::size_t j = 0; j < num_channels_per_kernel; ++j) {
+    std::vector<Eigen::MatrixXd> input_volume;
+    for (std::size_t i = 0; i < num_kernels; ++i) {
+      // Unpack the jth channel of the ith kernel.
+      const Eigen::MatrixXd& kernel_channel = kernels.at(i).at(j);
+      input_volume.emplace_back(
+          kernel_channel.rowwise().reverse().colwise().reverse());
+    }
+    assert(next_grad.size() == input_volume.size());
+
+    // TODO: Currently only works with square kernels and inputs due to the
+    // padding required for a full convolution.
+    const std::size_t conv_kernels_rows = next_grad.front().rows();
+    const std::size_t conv_kernels_cols = next_grad.front().cols();
+
+    // NOTE: "Full convolution" involves sweeping the filter all the way
+    // across, max possible overlap, which can be achieved by doing a
+    // "normal" convolution with a padded input.
+    std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
+    std::vector<Eigen::MatrixXd> output_volume_iteration;
+    const std::size_t full_conv_padding = conv_kernels_rows - 1;
+    ConvMatrixMultiplication(
+        input_volume, std::vector<std::vector<Eigen::MatrixXd>>{next_grad}, {0},
+        full_conv_padding, 1, &output_volume_iteration,
+        &input_channels_unrolled_return);
+
+    // Is it true that this will always be a single "channel" output?
+    assert(output_volume_iteration.size() == 1);
+    output_volume.emplace_back(output_volume_iteration.front()
+                                   .rowwise()
+                                   .reverse()
+                                   .colwise()
+                                   .reverse());
+  }
+  return output_volume;
+}
+
+std::vector<Eigen::MatrixXd> ConvWeightGradient(
+    const std::vector<Eigen::MatrixXd>& input_volume,
+    const std::vector<Eigen::MatrixXd>& next_grad) {
+  // What we are doing here is individually convolving each channel of
+  // input_volume with each "channel" of next_grad.
+  //
+  // General note for here and elsewhere: See if we can avoid looping over
+  // kernels if we can compute convolution with each kernel simultaneously via
+  // matrix multiplication, whether the unrolled weight/kernel vector is a
+  // matrix of unrolled kernels stacked together.
+  //
+  // This same operation can also be accomplished as follows, using the unrolled
+  // input matrix used for convolution in the forward pass, and next_grad
+  // reshaped into a matrix where each colum contains the weights of a kernel.
+  // Don't forget that this is a convolution!
+  //
+  // for (std::size_t i = 0; i < num_kernels_0; ++i) {
+  //   dydw_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
+  // }
+  std::vector<Eigen::MatrixXd> dydw_kernels;
+  for (int i = 0; i < input_volume.size(); ++i) {
+    for (int j = 0; j < next_grad.size(); ++j) {
+      std::vector<Eigen::MatrixXd> output_volume_iteration;
+      std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
+      ConvMatrixMultiplication({input_volume.at(i)}, {{next_grad.at(j)}}, {0},
+                               0, 1, &output_volume_iteration,
+                               &input_channels_unrolled_return);
+      for (const auto& o : output_volume_iteration) {
+        dydw_kernels.emplace_back(o);
+      }
+    }
+  }
+  return dydw_kernels;
+}
