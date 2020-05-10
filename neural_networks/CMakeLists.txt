@@ -12,6 +12,12 @@ add_library(nn
  conv_example.hpp
  conv_tests.cpp
  conv_tests.hpp
+ layer.cpp
+ layer.hpp
+ network.cpp
+ network.hpp
+ network_test.cpp
+ network_test.hpp
  training.cpp
  training.hpp)
 

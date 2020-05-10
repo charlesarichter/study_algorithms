@@ -2,6 +2,33 @@
 
 #include <iostream>
 
+double GetWeightCoefficient(const ActivationFunction& activation_function) {
+  switch (activation_function) {
+    case ActivationFunction::RELU: {
+      return 0.001;
+    }
+    case ActivationFunction::SIGMOID: {
+      return 0.1;
+    }
+    default: {
+      // TODO: Fill in other activation functions.
+      return 1.0;
+    }
+  }
+}
+
+std::vector<double> GetRandomVector(const int num_elements,
+                                    const double min_value,
+                                    const double max_value) {
+  std::vector<double> random_vector(num_elements);
+  std::default_random_engine generator;
+  std::uniform_real_distribution<double> distribution(min_value, max_value);
+  std::generate(
+      random_vector.begin(), random_vector.end(),
+      [&generator, &distribution]() { return distribution(generator); });
+  return random_vector;
+}
+
 NeuralNetworkParameters GetRandomNeuralNetwork(
     int input_dimension, int output_dimension, int num_hidden_layers,
     int nodes_per_hidden_layer, const ActivationFunction hidden_activation,
@@ -16,22 +43,7 @@ NeuralNetworkParameters GetRandomNeuralNetwork(
   // Randomly initialize weights and biases for each layer
   for (int i = 0; i < num_hidden_layers - 1; ++i) {
     // Scale random weights based on the type of activation.
-    double weight_coefficient = 1.0;
-    switch (hidden_activation) {
-      case ActivationFunction::RELU: {
-        weight_coefficient = 0.001;
-        break;
-      }
-      case ActivationFunction::SIGMOID: {
-        weight_coefficient = 0.1;
-        break;
-      }
-      default: {
-        // TODO: Fill me in.
-        break;
-      }
-    }
-
+    const double weight_coefficient = GetWeightCoefficient(hidden_activation);
     nn.weights.emplace_back(weight_coefficient *
                             Eigen::MatrixXd::Random(nodes_per_hidden_layer,
                                                     nodes_per_hidden_layer));
