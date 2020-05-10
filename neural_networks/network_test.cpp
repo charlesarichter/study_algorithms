@@ -6,12 +6,12 @@
 #include "nn.hpp"
 
 void RunNetworkTest() {
-  // Define network.
-  // const int num_conv_layers = 3;
+  // Specify conv layers.
   const int num_kernels = 3;
   const int kernel_size = 2;  // TODO: Enable non-square kernels.
   const int stride = 1;
 
+  // Fully connected layer width.
   const int num_nodes = 20;
 
   const ActivationFunction activation_function = ActivationFunction::RELU;

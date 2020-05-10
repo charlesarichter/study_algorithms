@@ -108,5 +108,8 @@ class LayerConv : public Layer {
   int num_kernels_;
   int stride_;
 
+  // TODO: Set this value in constructor.
+  int padding_{0};
+
   ActivationFunction activation_function_;
 };

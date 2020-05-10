@@ -1,5 +1,7 @@
 #include "network.hpp"
 
+#include <iostream>
+
 std::vector<double> Network::GetRandomParameters() const {
   std::vector<double> parameters;
   for (const LayerPtr& layer : layers_) {
@@ -23,17 +25,23 @@ double Network::Evaluate(const std::vector<double>& input,
   // Store the activation gradients from each layer during the forward pass.
   std::vector<std::vector<double>> layer_activation_gradients;
 
+  std::cerr << "Evaluating..." << std::endl;
+
   for (const LayerPtr& layer : layers_) {
     // Get parameters for this layer. TODO: Reduce/avoid copies.
     const int num_params = layer->GetNumParameters();
     const std::vector<double> layer_parameters(param_begin,
                                                param_begin + num_params);
 
+    std::cerr << "Layer input size: " << layer_input.size() << std::endl;
+
     // Evaluate layer.
     std::vector<double> layer_output;
     std::vector<double> layer_activation_gradient;
     layer->ForwardPass(layer_input, layer_parameters, &layer_output,
                        &layer_activation_gradient);
+
+    std::cerr << "Layer output size: " << layer_output.size() << std::endl;
 
     // Store activation gradient. TODO: Reduce/avoid copies.
     layer_activation_gradients.emplace_back(layer_activation_gradient);
