@@ -108,20 +108,23 @@ void LayerFC::BackwardPass(const std::vector<double>& input,
 }
 
 int LayerConv::GetNumParameters() const {
-  return kernel_rows_ * kernel_cols_ * num_kernels_ + num_kernels_;
+  int num_kernel_parameters = GetNumKernelParameters();
+  int num_bias_parameters = GetNumBiasParameters();
+  return num_kernel_parameters + num_bias_parameters;
 }
 
 std::vector<double> LayerConv::GetRandomParameters() const {
   const double weight_coefficient = GetWeightCoefficient(activation_function_);
 
   // Generate weights.
-  const int num_weights = kernel_rows_ * kernel_cols_ * num_kernels_;
+  const int num_weights = GetNumKernelParameters();
   const std::vector<double> weights =
       GetRandomVector(num_weights, -1 * weight_coefficient, weight_coefficient);
 
   // Generate biases.
-  const std::vector<double> biases = GetRandomVector(
-      num_kernels_, -1 * weight_coefficient, weight_coefficient);
+  const int num_biases = GetNumBiasParameters();
+  const std::vector<double> biases =
+      GetRandomVector(num_biases, -1 * weight_coefficient, weight_coefficient);
 
   // Output.
   std::vector<double> parameters;
@@ -134,11 +137,11 @@ void LayerConv::ForwardPass(const std::vector<double>& input,
                             const std::vector<double>& parameters,
                             std::vector<double>* output,
                             std::vector<double>* activation_gradient) const {
-  assert(parameters.size() == GetNumParameters());
+  int num_kernel_parameters = GetNumKernelParameters();
+  int num_bias_parameters = GetNumBiasParameters();
 
-  std::size_t num_kernel_parameters =
-      num_kernels_ * input_channels_ * input_rows_ * input_cols_;
-  std::size_t num_bias_parameters = num_kernels_;
+  assert(parameters.size() == GetNumParameters());
+  assert(parameters.size() == num_kernel_parameters + num_bias_parameters);
 
   // TODO: Avoid copies.
   const std::vector<double> kernel_parameters(
@@ -201,9 +204,8 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
       GetOutputRows() * GetOutputCols() * num_kernels_;
   assert(activation_gradient.size() == num_outputs * num_outputs);
 
-  std::size_t num_kernel_parameters =
-      num_kernels_ * input_channels_ * input_rows_ * input_cols_;
-  std::size_t num_bias_parameters = num_kernels_;
+  std::size_t num_kernel_parameters = GetNumKernelParameters();
+  std::size_t num_bias_parameters = GetNumBiasParameters();
 
   // TODO: Avoid copies.
   const std::vector<double> kernel_parameters(

@@ -121,6 +121,12 @@ class LayerConv : public Layer {
   int GetOutputChannels() const { return num_kernels_; }
 
  private:
+  int GetNumKernelParameters() const {
+    return num_kernels_ * input_channels_ * kernel_rows_ * kernel_cols_;
+  }
+  int GetNumBiasParameters() const { return num_kernels_; }
+
+ private:
   int input_rows_;
   int input_cols_;
   int input_channels_;
