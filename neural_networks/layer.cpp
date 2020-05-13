@@ -136,11 +136,11 @@ void LayerConv::ForwardPass(const std::vector<double>& input,
                             std::vector<double>* activation_gradient) const {
   assert(parameters.size() == GetNumParameters());
 
-  // TODO: Avoid copies.
   std::size_t num_kernel_parameters =
       num_kernels_ * input_channels_ * input_rows_ * input_cols_;
   std::size_t num_bias_parameters = num_kernels_;
 
+  // TODO: Avoid copies.
   const std::vector<double> kernel_parameters(
       parameters.data(), parameters.data() + num_kernel_parameters);
   const std::vector<double> bias_parameters(
