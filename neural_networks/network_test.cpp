@@ -14,7 +14,7 @@ void RunNetworkTest() {
   // Fully connected layer width.
   const int num_nodes = 20;
 
-  const ActivationFunction activation_function = ActivationFunction::RELU;
+  const ActivationFunction activation_function = ActivationFunction::SIGMOID;
   const ActivationFunction output_function = ActivationFunction::SOFTMAX;
 
   // Define input.
