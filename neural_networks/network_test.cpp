@@ -16,7 +16,6 @@ void RunNetworkTest() {
 
   const ActivationFunction activation_function = ActivationFunction::RELU;
   const ActivationFunction output_function = ActivationFunction::SOFTMAX;
-  const LossFunction loss_function = LossFunction::CROSS_ENTROPY;
 
   // Define input.
   const int input_size = 10;  // TODO: Enable non-square inputs.
@@ -60,7 +59,7 @@ void RunNetworkTest() {
       std::make_shared<LayerFC>(num_nodes, num_nodes, activation_function);
 
   LayerFCPtr layer_5 =
-      std::make_shared<LayerFC>(num_nodes, num_nodes, output_function);
+      std::make_shared<LayerFC>(num_nodes, num_categories, output_function);
 
   // Build network.
   Network network({layer_0, layer_1, layer_2, layer_3, layer_4, layer_5});
@@ -69,11 +68,39 @@ void RunNetworkTest() {
   std::vector<double> parameters = network.GetRandomParameters();
 
   // Generate random input.
+  // TODO: Consider scaling, centering, normalization of input.
   const std::vector<double> input =
       GetRandomVector(input_size * input_size * num_input_channels, 0, 1);
-  const std::vector<double> label;
+
+  // Generate arbitrary label.
+  std::vector<double> label(num_categories, 0);
+  label.front() = 1;
 
   // Evaluate network.
-  std::vector<double> gradient;
-  const double loss = network.Evaluate(input, label, parameters, &gradient);
+  std::vector<double> input_gradient;
+  std::vector<double> param_gradient;
+  const double loss = network.Evaluate(input, label, parameters,
+                                       &input_gradient, &param_gradient);
+
+  // Perturbation.
+  const double delta = 1e-6;
+
+  // Estimate gradient numerically.
+  std::vector<double> input_gradient_delta;
+  std::vector<double> param_gradient_delta;
+
+  for (int i = 0; i < input.size(); ++i) {
+    std::vector<double> input_delta = input;
+    input_delta.at(i) += delta;
+
+    const double loss_delta =
+        network.Evaluate(input_delta, label, parameters, &input_gradient_delta,
+                         &param_gradient_delta);
+
+    std::cerr << "Analytical loss: " << loss
+              << " Perturbed loss: " << loss_delta
+              << " Analytical gradient: " << input_gradient.at(i)
+              << " Numerical gradient: " << (loss_delta - loss) / delta
+              << std::endl;
+  }
 }
