@@ -19,7 +19,8 @@ class Network {
   double Evaluate(const std::vector<double>& input,
                   const std::vector<double>& label,
                   const std::vector<double>& parameters,
-                  std::vector<double>* gradient);
+                  std::vector<double>* input_gradient,
+                  std::vector<double>* param_gradient) const;
 
  private:
   std::vector<LayerPtr> layers_;
