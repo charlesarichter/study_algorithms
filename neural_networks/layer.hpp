@@ -30,6 +30,13 @@ class Layer {
                            std::vector<double>* output,
                            std::vector<double>* activation_gradient) const = 0;
 
+  virtual void BackwardPass(const std::vector<double>& input,
+                            const std::vector<double>& parameters,
+                            const std::vector<double>& activation_gradient,
+                            const std::vector<double>& dloss_doutput,
+                            std::vector<double>* dloss_dinput,
+                            std::vector<double>* dloss_dparams) const = 0;
+
   // virtual InputOutputVolume ForwardPass(const InputOutputVolume& input) = 0;
 
   // virtual InputOutputVolume BackwardPass(const InputOutputVolume& input) = 0;
@@ -57,6 +64,13 @@ class LayerFC : public Layer {
                    const std::vector<double>& parameters,
                    std::vector<double>* output,
                    std::vector<double>* activation_gradient) const;
+
+  void BackwardPass(const std::vector<double>& input,
+                    const std::vector<double>& parameters,
+                    const std::vector<double>& activation_gradient,
+                    const std::vector<double>& dloss_doutput,
+                    std::vector<double>* dloss_dinput,
+                    std::vector<double>* dloss_dparams) const;
 
  private:
   int num_inputs_;
@@ -90,6 +104,13 @@ class LayerConv : public Layer {
                    const std::vector<double>& parameters,
                    std::vector<double>* output,
                    std::vector<double>* activation_gradient) const;
+
+  void BackwardPass(const std::vector<double>& input,
+                    const std::vector<double>& parameters,
+                    const std::vector<double>& activation_gradient,
+                    const std::vector<double>& dloss_doutput,
+                    std::vector<double>* dloss_dinput,
+                    std::vector<double>* dloss_dparams) const;
 
   int GetOutputRows() const {
     return (input_rows_ - kernel_rows_) / stride_ + 1;

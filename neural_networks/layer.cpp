@@ -66,6 +66,47 @@ void LayerFC::ForwardPass(const std::vector<double>& input,
       activation_gradient_mat.data() + activation_gradient_mat.size());
 }
 
+void LayerFC::BackwardPass(const std::vector<double>& input,
+                           const std::vector<double>& parameters,
+                           const std::vector<double>& activation_gradient,
+                           const std::vector<double>& dloss_doutput,
+                           std::vector<double>* dloss_dinput,
+                           std::vector<double>* dloss_dparams) const {
+  // Compute derivative of output with respect to input.
+  // y = f(Wx + b);
+  // y = f(z), where z = Wx + b.
+  // dydx = dfdz*dzdx
+  // dydx = f'(z) * W.
+
+  // Layer gradient should have num_outputs_ rows and num_inputs_ cols.
+  // W has                      num_outputs_ rows and num_inputs_ cols.
+  // activation gradient has    num_outputs_ rows and num_outputs_ cols.
+
+  const std::size_t num_weights = num_inputs_ * num_outputs_;
+  const std::size_t num_biases = num_outputs_;
+
+  const Eigen::Map<const Eigen::MatrixXd> activation_gradient_mat(
+      activation_gradient.data(), num_outputs_, num_outputs_);
+
+  const Eigen::Map<const Eigen::MatrixXd> W(parameters.data(), num_outputs_,
+                                            num_inputs_);
+  const Eigen::Map<const Eigen::VectorXd> b(parameters.data() + num_weights,
+                                            num_biases);
+
+  assert(dloss_doutput.size() == num_outputs_);
+  const Eigen::Map<const Eigen::MatrixXd> dloss_doutput_mat(
+      dloss_doutput.data(), 1, num_outputs_);
+
+  const Eigen::MatrixXd doutput_dinput_mat = activation_gradient_mat * W;
+
+  const Eigen::MatrixXd dloss_dinput_mat =
+      dloss_doutput_mat * doutput_dinput_mat;
+
+  *dloss_dinput =
+      std::vector<double>(dloss_dinput_mat.data(),
+                          dloss_dinput_mat.data() + dloss_dinput_mat.size());
+}
+
 int LayerConv::GetNumParameters() const {
   return kernel_rows_ * kernel_cols_ * num_kernels_ + num_kernels_;
 }
@@ -146,4 +187,53 @@ void LayerConv::ForwardPass(const std::vector<double>& input,
   *activation_gradient = std::vector<double>(
       activation_gradient_mat.data(),
       activation_gradient_mat.data() + activation_gradient_mat.size());
+}
+
+void LayerConv::BackwardPass(const std::vector<double>& input,
+                             const std::vector<double>& parameters,
+                             const std::vector<double>& activation_gradient,
+                             const std::vector<double>& dloss_doutput,
+                             std::vector<double>* dloss_dinput,
+                             std::vector<double>* dloss_dparams) const {
+  assert(parameters.size() == GetNumParameters());
+
+  const std::size_t num_outputs =
+      GetOutputRows() * GetOutputCols() * num_kernels_;
+  assert(activation_gradient.size() == num_outputs * num_outputs);
+
+  std::size_t num_kernel_parameters =
+      num_kernels_ * input_channels_ * input_rows_ * input_cols_;
+  std::size_t num_bias_parameters = num_kernels_;
+
+  // TODO: Avoid copies.
+  const std::vector<double> kernel_parameters(
+      parameters.data(), parameters.data() + num_kernel_parameters);
+  const std::vector<double> bias_parameters(
+      parameters.data() + num_kernel_parameters,
+      parameters.data() + num_kernel_parameters + num_bias_parameters);
+
+  // Reshape input into InputOutputVolume.
+  const InputOutputVolume input_volume(input, input_channels_, input_rows_,
+                                       input_cols_);
+
+  // Reshape parameters into ConvKernels.
+  const ConvKernels conv_kernels(kernel_parameters, num_kernels_,
+                                 input_channels_, kernel_rows_, kernel_cols_);
+
+  // Reshape dloss_doutput into iov format.
+  const InputOutputVolume dloss_doutput_iov(dloss_doutput, num_kernels_,
+                                            GetOutputRows(), GetOutputCols());
+
+  // TODO: Still need to incorporate activation gradient!
+  const InputOutputVolume activation_gradient_iov(
+      activation_gradient, num_kernels_, GetOutputRows(), GetOutputCols());
+
+  const std::vector<Eigen::MatrixXd> dloss_doutput_volume =
+      dloss_doutput_iov.GetVolume();
+
+  const std::vector<Eigen::MatrixXd> dloss_dinput_volume =
+      ConvGradient(conv_kernels, dloss_doutput_volume);
+
+  const InputOutputVolume dloss_dinput_iov(dloss_dinput_volume);
+  *dloss_dinput = dloss_dinput_iov.GetValues();
 }
