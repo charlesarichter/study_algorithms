@@ -203,6 +203,7 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
   const std::size_t num_outputs =
       GetOutputRows() * GetOutputCols() * num_kernels_;
   assert(activation_gradient.size() == num_outputs * num_outputs);
+  assert(num_outputs == dloss_doutput.size());
 
   std::size_t num_kernel_parameters = GetNumKernelParameters();
   std::size_t num_bias_parameters = GetNumBiasParameters();
@@ -222,9 +223,20 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
   const ConvKernels conv_kernels(kernel_parameters, num_kernels_,
                                  input_channels_, kernel_rows_, kernel_cols_);
 
+  const Eigen::VectorXd dloss_doutput_pre_act =
+      Eigen::Map<const Eigen::MatrixXd>(activation_gradient.data(),
+                                        dloss_doutput.size(),
+                                        dloss_doutput.size()) *
+      Eigen::Map<const Eigen::VectorXd>(dloss_doutput.data(),
+                                        dloss_doutput.size());
+  std::vector<double> dloss_doutput_pre_act_vec(
+      dloss_doutput_pre_act.data(),
+      dloss_doutput_pre_act.data() + dloss_doutput_pre_act.size());
+
   // Reshape dloss_doutput into iov format.
-  const InputOutputVolume dloss_doutput_iov(dloss_doutput, num_kernels_,
-                                            GetOutputRows(), GetOutputCols());
+  const InputOutputVolume dloss_doutput_iov(dloss_doutput_pre_act_vec,
+                                            num_kernels_, GetOutputRows(),
+                                            GetOutputCols());
 
   // TODO: Still need to incorporate activation gradient!
   const InputOutputVolume activation_gradient_iov(
