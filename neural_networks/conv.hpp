@@ -80,3 +80,9 @@ std::vector<Eigen::MatrixXd> ConvGradient(
 std::vector<Eigen::MatrixXd> ConvWeightGradient(
     const std::vector<Eigen::MatrixXd>& input_volume,
     const std::vector<Eigen::MatrixXd>& next_grad);
+
+/**
+ * TODO: Enable different amount of horizontal and vertical padding.
+ */
+std::vector<Eigen::MatrixXd> PadVolume(
+    const std::vector<Eigen::MatrixXd>& input_volume_unpadded, int padding);

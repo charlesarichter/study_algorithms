@@ -10,26 +10,9 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
   assert(!input_volume_unpadded.empty());
   const size_t num_channels = input_volume_unpadded.size();
 
-  // Size of unpadded input.
-  const size_t input_cols_unpadded = input_volume_unpadded.front().cols();
-  const size_t input_rows_unpadded = input_volume_unpadded.front().rows();
-
-  // Size of input after padding.
-  const size_t input_cols_padded = input_cols_unpadded + 2 * padding;
-  const size_t input_rows_padded = input_rows_unpadded + 2 * padding;
-
-  // Create padded inputs.
-  std::vector<Eigen::MatrixXd> input_volume;
-  for (const Eigen::MatrixXd& input_channel_unpadded : input_volume_unpadded) {
-    // Make a matrix of the padded size.
-    Eigen::MatrixXd input_channel_padded =
-        Eigen::MatrixXd::Zero(input_rows_padded, input_cols_padded);
-
-    // Copy the unpadded input into the appropriate block of the padded input.
-    input_channel_padded.block(padding, padding, input_rows_unpadded,
-                               input_cols_unpadded) = input_channel_unpadded;
-    input_volume.emplace_back(input_channel_padded);
-  }
+  // Pad input.
+  const std::vector<Eigen::MatrixXd> input_volume =
+      PadVolume(input_volume_unpadded, padding);
 
   const size_t input_cols = input_volume.front().cols();  // NOTE: Padded.
   const size_t input_rows = input_volume.front().rows();  // NOTE: Padded.
@@ -111,26 +94,9 @@ void ConvMatrixMultiplication(
   assert(!input_volume_unpadded.empty());
   const size_t num_channels = input_volume_unpadded.size();
 
-  // Size of unpadded input.
-  const size_t input_cols_unpadded = input_volume_unpadded.front().cols();
-  const size_t input_rows_unpadded = input_volume_unpadded.front().rows();
-
-  // Size of input after padding.
-  const size_t input_cols_padded = input_cols_unpadded + 2 * padding;
-  const size_t input_rows_padded = input_rows_unpadded + 2 * padding;
-
-  // Create padded inputs.
-  std::vector<Eigen::MatrixXd> input_volume;
-  for (const Eigen::MatrixXd& input_channel_unpadded : input_volume_unpadded) {
-    // Make a matrix of the padded size.
-    Eigen::MatrixXd input_channel_padded =
-        Eigen::MatrixXd::Zero(input_rows_padded, input_cols_padded);
-
-    // Copy the unpadded input into the appropriate block of the padded input.
-    input_channel_padded.block(padding, padding, input_rows_unpadded,
-                               input_cols_unpadded) = input_channel_unpadded;
-    input_volume.emplace_back(input_channel_padded);
-  }
+  // Pad input.
+  const std::vector<Eigen::MatrixXd> input_volume =
+      PadVolume(input_volume_unpadded, padding);
 
   const size_t input_cols = input_volume.front().cols();  // NOTE: Padded.
   const size_t input_rows = input_volume.front().rows();  // NOTE: Padded.
@@ -311,4 +277,26 @@ std::vector<Eigen::MatrixXd> ConvWeightGradient(
     }
   }
   return dydw_kernels;
+}
+
+std::vector<Eigen::MatrixXd> PadVolume(
+    const std::vector<Eigen::MatrixXd>& input_volume_unpadded, int padding) {
+  const size_t input_cols_unpadded = input_volume_unpadded.front().cols();
+  const size_t input_rows_unpadded = input_volume_unpadded.front().rows();
+  const size_t input_cols_padded = input_cols_unpadded + 2 * padding;
+  const size_t input_rows_padded = input_rows_unpadded + 2 * padding;
+
+  // Create padded inputs.
+  std::vector<Eigen::MatrixXd> input_volume;
+  for (const Eigen::MatrixXd& input_channel_unpadded : input_volume_unpadded) {
+    // Make a matrix of the padded size.
+    Eigen::MatrixXd input_channel_padded =
+        Eigen::MatrixXd::Zero(input_rows_padded, input_cols_padded);
+
+    // Copy the unpadded input into the appropriate block of the padded input.
+    input_channel_padded.block(padding, padding, input_rows_unpadded,
+                               input_cols_unpadded) = input_channel_unpadded;
+    input_volume.emplace_back(input_channel_padded);
+  }
+  return input_volume;
 }
