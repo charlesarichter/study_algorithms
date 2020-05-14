@@ -86,3 +86,7 @@ std::vector<Eigen::MatrixXd> ConvWeightGradient(
  */
 std::vector<Eigen::MatrixXd> PadVolume(
     const std::vector<Eigen::MatrixXd>& input_volume_unpadded, int padding);
+
+std::vector<Eigen::MatrixXd> BuildConvInputMatrix(
+    const std::vector<Eigen::MatrixXd>& input_volume, const int kernel_rows,
+    const int kernel_cols, const int stride);
