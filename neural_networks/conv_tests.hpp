@@ -23,6 +23,7 @@ Eigen::VectorXd TestConvNetMultiConv(
     const std::size_t num_steps_horizontal_0,
     const std::size_t num_steps_vertical_1,
     const std::size_t num_steps_horizontal_1, const bool print,
+    const Eigen::VectorXd& label,
     std::vector<Eigen::MatrixXd>* d_output_d_kernel,
     Eigen::VectorXd* d_output_d_bias, Eigen::MatrixXd* foo);
 

@@ -4,6 +4,7 @@
 
 #include "conv.hpp"
 #include "conv_tests.hpp"
+#include "network_test.hpp"
 #include "nn.hpp"
 #include "training.hpp"
 
@@ -748,7 +749,8 @@ int main() {
   // RunConvTests();
   // RunConvKernelTests();
   // RunConvGradientTests();
-  TestConvNetGradientsMultiConv();
+  // TestConvNetGradientsMultiConv();
+  RunNetworkTest();
 
   return 0;
 }

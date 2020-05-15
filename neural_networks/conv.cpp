@@ -10,26 +10,9 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
   assert(!input_volume_unpadded.empty());
   const size_t num_channels = input_volume_unpadded.size();
 
-  // Size of unpadded input.
-  const size_t input_cols_unpadded = input_volume_unpadded.front().cols();
-  const size_t input_rows_unpadded = input_volume_unpadded.front().rows();
-
-  // Size of input after padding.
-  const size_t input_cols_padded = input_cols_unpadded + 2 * padding;
-  const size_t input_rows_padded = input_rows_unpadded + 2 * padding;
-
-  // Create padded inputs.
-  std::vector<Eigen::MatrixXd> input_volume;
-  for (const Eigen::MatrixXd& input_channel_unpadded : input_volume_unpadded) {
-    // Make a matrix of the padded size.
-    Eigen::MatrixXd input_channel_padded =
-        Eigen::MatrixXd::Zero(input_rows_padded, input_cols_padded);
-
-    // Copy the unpadded input into the appropriate block of the padded input.
-    input_channel_padded.block(padding, padding, input_rows_unpadded,
-                               input_cols_unpadded) = input_channel_unpadded;
-    input_volume.emplace_back(input_channel_padded);
-  }
+  // Pad input.
+  const std::vector<Eigen::MatrixXd> input_volume =
+      PadVolume(input_volume_unpadded, padding);
 
   const size_t input_cols = input_volume.front().cols();  // NOTE: Padded.
   const size_t input_rows = input_volume.front().rows();  // NOTE: Padded.
@@ -111,26 +94,9 @@ void ConvMatrixMultiplication(
   assert(!input_volume_unpadded.empty());
   const size_t num_channels = input_volume_unpadded.size();
 
-  // Size of unpadded input.
-  const size_t input_cols_unpadded = input_volume_unpadded.front().cols();
-  const size_t input_rows_unpadded = input_volume_unpadded.front().rows();
-
-  // Size of input after padding.
-  const size_t input_cols_padded = input_cols_unpadded + 2 * padding;
-  const size_t input_rows_padded = input_rows_unpadded + 2 * padding;
-
-  // Create padded inputs.
-  std::vector<Eigen::MatrixXd> input_volume;
-  for (const Eigen::MatrixXd& input_channel_unpadded : input_volume_unpadded) {
-    // Make a matrix of the padded size.
-    Eigen::MatrixXd input_channel_padded =
-        Eigen::MatrixXd::Zero(input_rows_padded, input_cols_padded);
-
-    // Copy the unpadded input into the appropriate block of the padded input.
-    input_channel_padded.block(padding, padding, input_rows_unpadded,
-                               input_cols_unpadded) = input_channel_unpadded;
-    input_volume.emplace_back(input_channel_padded);
-  }
+  // Pad input.
+  const std::vector<Eigen::MatrixXd> input_volume =
+      PadVolume(input_volume_unpadded, padding);
 
   const size_t input_cols = input_volume.front().cols();  // NOTE: Padded.
   const size_t input_rows = input_volume.front().rows();  // NOTE: Padded.
@@ -150,32 +116,12 @@ void ConvMatrixMultiplication(
   // line up with the input dimensions.
   const size_t num_steps_horizontal = (input_cols - kernel_cols) / stride + 1;
   const size_t num_steps_vertical = (input_rows - kernel_rows) / stride + 1;
-  const size_t num_steps_total = num_steps_horizontal * num_steps_vertical;
-  const size_t num_kernel_elements_total = kernel_cols * kernel_rows;
 
   // Convert input channels to their "unrolled" form so that each column of each
   // channel represents the set of elements that will be multiplied by the
   // kernel placed in a certain location.
-  std::vector<Eigen::MatrixXd> input_channels_unrolled;
-  for (size_t j = 0; j < num_channels; ++j) {
-    const Eigen::MatrixXd& input_channel = input_volume.at(j);
-    Eigen::MatrixXd input_channel_unrolled =
-        Eigen::MatrixXd::Zero(num_kernel_elements_total, num_steps_total);
-    for (size_t k = 0; k < num_steps_horizontal; ++k) {
-      const size_t min_ind_col = k * stride;
-      for (size_t l = 0; l < num_steps_vertical; ++l) {
-        const size_t min_ind_row = l * stride;
-
-        // Extract sub-matrix we want to multiply.
-        Eigen::MatrixXd input_region = input_channel.block(
-            min_ind_row, min_ind_col, kernel_rows, kernel_cols);
-        const std::size_t ind = l + k * num_steps_vertical;  // 0, 1, 2, 3,...
-        input_channel_unrolled.col(ind) = Eigen::Map<Eigen::VectorXd>(
-            input_region.data(), input_region.size());
-      }
-    }
-    input_channels_unrolled.emplace_back(input_channel_unrolled);
-  }
+  const std::vector<Eigen::MatrixXd> input_channels_unrolled =
+      BuildConvInputMatrix(input_volume, kernel_rows, kernel_cols, stride);
 
   // Convert kernels to their unrolled form.
   std::vector<std::vector<Eigen::VectorXd>> conv_kernels_unrolled;
@@ -298,17 +244,77 @@ std::vector<Eigen::MatrixXd> ConvWeightGradient(
   //   dydw_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
   // }
   std::vector<Eigen::MatrixXd> dydw_kernels;
-  for (int i = 0; i < input_volume.size(); ++i) {
-    for (int j = 0; j < next_grad.size(); ++j) {
+  for (int j = 0; j < next_grad.size(); ++j) {
+    for (int i = 0; i < input_volume.size(); ++i) {
       std::vector<Eigen::MatrixXd> output_volume_iteration;
       std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
       ConvMatrixMultiplication({input_volume.at(i)}, {{next_grad.at(j)}}, {0},
                                0, 1, &output_volume_iteration,
                                &input_channels_unrolled_return);
+      assert(output_volume_iteration.size() == 1);
       for (const auto& o : output_volume_iteration) {
         dydw_kernels.emplace_back(o);
       }
     }
   }
   return dydw_kernels;
+}
+
+std::vector<Eigen::MatrixXd> PadVolume(
+    const std::vector<Eigen::MatrixXd>& input_volume_unpadded, int padding) {
+  const size_t input_cols_unpadded = input_volume_unpadded.front().cols();
+  const size_t input_rows_unpadded = input_volume_unpadded.front().rows();
+  const size_t input_cols_padded = input_cols_unpadded + 2 * padding;
+  const size_t input_rows_padded = input_rows_unpadded + 2 * padding;
+
+  // Create padded inputs.
+  std::vector<Eigen::MatrixXd> input_volume;
+  for (const Eigen::MatrixXd& input_channel_unpadded : input_volume_unpadded) {
+    // Make a matrix of the padded size.
+    Eigen::MatrixXd input_channel_padded =
+        Eigen::MatrixXd::Zero(input_rows_padded, input_cols_padded);
+
+    // Copy the unpadded input into the appropriate block of the padded input.
+    input_channel_padded.block(padding, padding, input_rows_unpadded,
+                               input_cols_unpadded) = input_channel_unpadded;
+    input_volume.emplace_back(input_channel_padded);
+  }
+  return input_volume;
+}
+
+std::vector<Eigen::MatrixXd> BuildConvInputMatrix(
+    const std::vector<Eigen::MatrixXd>& input_volume, const int kernel_rows,
+    const int kernel_cols, const int stride) {
+  // Unpack and calculate constants.
+  const int num_channels = input_volume.size();
+  const int input_rows = input_volume.front().rows();
+  const int input_cols = input_volume.front().cols();
+  const int num_steps_vertical = (input_rows - kernel_rows) / stride + 1;
+  const int num_steps_horizontal = (input_cols - kernel_cols) / stride + 1;
+  const int num_steps_total = num_steps_horizontal * num_steps_vertical;
+  const int num_kernel_elements_per_channel = kernel_cols * kernel_rows;
+
+  // Build input matrix.
+  std::vector<Eigen::MatrixXd> input_channels_unrolled;
+  for (int j = 0; j < num_channels; ++j) {
+    const Eigen::MatrixXd& input_channel = input_volume.at(j);
+    Eigen::MatrixXd input_channel_unrolled =
+        Eigen::MatrixXd::Zero(num_kernel_elements_per_channel, num_steps_total);
+
+    for (int k = 0; k < num_steps_horizontal; ++k) {
+      const int min_ind_col = k * stride;
+      for (int l = 0; l < num_steps_vertical; ++l) {
+        const int min_ind_row = l * stride;
+
+        // Extract sub-matrix we want to multiply.
+        const Eigen::MatrixXd input_region = input_channel.block(
+            min_ind_row, min_ind_col, kernel_rows, kernel_cols);
+        const int ind = l + k * num_steps_vertical;  // 0, 1, 2, 3,...
+        input_channel_unrolled.col(ind) = Eigen::Map<const Eigen::VectorXd>(
+            input_region.data(), input_region.size());
+      }
+    }
+    input_channels_unrolled.emplace_back(std::move(input_channel_unrolled));
+  }
+  return input_channels_unrolled;
 }

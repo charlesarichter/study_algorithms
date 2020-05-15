@@ -95,12 +95,16 @@ void TestConvNetGradientsMultiConv() {
 
   // Randomly generate fully connected and output layer weights.
   const std::size_t num_fc = 8;
-  const std::size_t num_out = 1;
+  const std::size_t num_out = 10;
   const Eigen::MatrixXd W2 =
       Eigen::MatrixXd::Random(num_fc, num_steps_total_2 * num_kernels);
   const Eigen::VectorXd b2 = Eigen::VectorXd::Zero(num_fc);
   const Eigen::MatrixXd W3 = Eigen::MatrixXd::Random(num_out, num_fc);
   const Eigen::VectorXd b3 = Eigen::VectorXd::Zero(num_out);
+
+  // Generate label.
+  Eigen::VectorXd label = Eigen::VectorXd::Zero(num_out);
+  label(0) = 1;
 
   // Get nominal output and analytical gradients.
   std::vector<Eigen::MatrixXd> d_output_d_kernel;  // Each element is a channel.
@@ -110,7 +114,7 @@ void TestConvNetGradientsMultiConv() {
       input_volume, conv_kernels_1, conv_biases_1, conv_kernels_2,
       conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
       num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
-      true, &d_output_d_kernel, &d_output_d_bias, &foo);
+      true, label, &d_output_d_kernel, &d_output_d_bias, &foo);
 
   // Test numerical gradients of output w.r.t. W_fc.
   const double delta = 1e-6;
@@ -134,7 +138,7 @@ void TestConvNetGradientsMultiConv() {
         input_volume_perturbed, conv_kernels_1, conv_biases_1, conv_kernels_2,
         conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
         num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
-        false, &d_output_d_kernel, &d_output_d_bias, &foo);
+        false, label, &d_output_d_kernel, &d_output_d_bias, &foo);
 
     // Compute perturbed output.
     const Eigen::VectorXd numerical_gradient = (output_delta - output) / delta;
@@ -161,7 +165,7 @@ void TestConvNetGradientsMultiConv() {
         input_volume, conv_kernels_1_perturbed, conv_biases_1, conv_kernels_2,
         conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
         num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
-        false, &d_output_d_kernel, &d_output_d_bias, &foo);
+        false, label, &d_output_d_kernel, &d_output_d_bias, &foo);
 
     // Compute perturbed output.
     const Eigen::VectorXd numerical_gradient = (output_delta - output) / delta;
@@ -188,7 +192,7 @@ void TestConvNetGradientsMultiConv() {
         input_volume, conv_kernels_1, conv_biases_1, conv_kernels_2_perturbed,
         conv_biases_2, W2, b2, W3, b3, num_steps_vertical_1,
         num_steps_horizontal_1, num_steps_vertical_2, num_steps_horizontal_2,
-        false, &d_output_d_kernel, &d_output_d_bias, &foo);
+        false, label, &d_output_d_kernel, &d_output_d_bias, &foo);
 
     // Compute perturbed output.
     const Eigen::VectorXd numerical_gradient = (output_delta - output) / delta;
@@ -205,6 +209,7 @@ Eigen::VectorXd TestConvNetMultiConv(
     const std::size_t num_steps_horizontal_0,
     const std::size_t num_steps_vertical_1,
     const std::size_t num_steps_horizontal_1, const bool print,
+    const Eigen::VectorXd& label,
     std::vector<Eigen::MatrixXd>* d_output_d_kernel,
     Eigen::VectorXd* d_output_d_bias, Eigen::MatrixXd* foo) {
   const int padding = 0;
@@ -271,6 +276,11 @@ Eigen::VectorXd TestConvNetMultiConv(
   const Eigen::VectorXd l3_post_act =
       Activation(l3_pre_act, ActivationFunction::SIGMOID, &l3_post_act_grad);
 
+  // Evaluate loss.
+  Eigen::VectorXd loss_gradient;
+  const Eigen::VectorXd loss =
+      Loss(l3_post_act, label, LossFunction::CROSS_ENTROPY, &loss_gradient);
+
   // Network:
   // Pre/Post indicate before/after activation
   //
@@ -279,12 +289,14 @@ Eigen::VectorXd TestConvNetMultiConv(
   // Input -> Conv0 -> Act0 -> Conv1 -> Act1 -> Fc2 -> Act2 -> Fc3 -> Act3 -> Y
   //          W0               W1               W2             W3
 
-  Eigen::MatrixXd dydl3post =
-      Eigen::MatrixXd::Identity(l3_post_act.size(), l3_post_act.size());
+  // Eigen::MatrixXd dydl3post =
+  //     Eigen::MatrixXd::Identity(l3_post_act.size(), l3_post_act.size());
+
+  Eigen::VectorXd dydl3post = loss_gradient;
 
   Eigen::MatrixXd dl3postdl3pre = l3_post_act_grad;
 
-  Eigen::MatrixXd dydl3pre = dydl3post * dl3postdl3pre;
+  Eigen::MatrixXd dydl3pre = (dl3postdl3pre * dydl3post).transpose();
 
   Eigen::MatrixXd dl3predw3 = l2_post_act;
 
@@ -386,7 +398,7 @@ Eigen::VectorXd TestConvNetMultiConv(
     }
   }
 
-  return l3_post_act;
+  return loss;
 }
 
 void TestConv(const ConvExample& conv_example) {

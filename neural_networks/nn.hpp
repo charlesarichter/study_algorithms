@@ -14,6 +14,12 @@ struct NeuralNetworkParameters {
   std::vector<ActivationFunction> activation_functions;
 };
 
+double GetWeightCoefficient(const ActivationFunction& activation_function);
+
+std::vector<double> GetRandomVector(const int num_elements,
+                                    const double min_value,
+                                    const double max_value);
+
 NeuralNetworkParameters GetRandomNeuralNetwork(
     int input_dimension, int output_dimension, int num_hidden_layers,
     int nodes_per_hidden_layer, const ActivationFunction hidden_activation,
