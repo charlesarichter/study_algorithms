@@ -78,6 +78,8 @@ double Network::Evaluate(const std::vector<double>& input,
       loss_gradient.data(), loss_gradient.data() + loss_gradient.size());
   // std::cerr << "dloss_dnetwork size: " << dloss_dnetwork.size() << std::endl;
 
+  std::vector<std::vector<double>> layer_param_gradients;
+
   for (int i = (layers_.size() - 1); i >= 0; --i) {
     const LayerPtr& layer = layers_.at(i);
 
@@ -87,17 +89,32 @@ double Network::Evaluate(const std::vector<double>& input,
     const std::vector<double>& layer_act_grad =
         layer_activation_gradients.at(i);
 
-    std::vector<double> a;
-    std::vector<double> b;
+    std::vector<double> dloss_dnetwork_updated;
+    std::vector<double> dloss_dparams;
 
     layer->BackwardPass(layer_input, layer_param, layer_act_grad,
-                        dloss_dnetwork, &a, &b);
-    dloss_dnetwork = a;
+                        dloss_dnetwork, &dloss_dnetwork_updated,
+                        &dloss_dparams);
+    dloss_dnetwork = dloss_dnetwork_updated;
     // std::cerr << "dloss_dnetwork size: " << dloss_dnetwork.size() <<
     // std::endl;
+
+    layer_param_gradients.emplace_back(dloss_dparams);
+  }
+
+  // Return layer param gradients in correct order.
+  for (int i = (layer_param_gradients.size() - 1); i >= 0; --i) {
+    const std::vector<double>& layer_param_gradient =
+        layer_param_gradients.at(i);
+    param_gradient->insert(param_gradient->end(), layer_param_gradient.begin(),
+                           layer_param_gradient.end());
   }
 
   *input_gradient = dloss_dnetwork;
+
+  // std::cerr << "Num param gradients: " << param_gradient->size() <<
+  // std::endl; std::cerr << "Num params: " << parameters.size() << std::endl;
+  assert(param_gradient->size() == parameters.size());
 
   return loss(0);  // Make loss a scalar.
 }
