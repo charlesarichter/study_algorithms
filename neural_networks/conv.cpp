@@ -244,13 +244,14 @@ std::vector<Eigen::MatrixXd> ConvWeightGradient(
   //   dydw_kernels.emplace_back(conv_0_input_mat.at(i) * dydl0_wrapped);
   // }
   std::vector<Eigen::MatrixXd> dydw_kernels;
-  for (int i = 0; i < input_volume.size(); ++i) {
-    for (int j = 0; j < next_grad.size(); ++j) {
+  for (int j = 0; j < next_grad.size(); ++j) {
+    for (int i = 0; i < input_volume.size(); ++i) {
       std::vector<Eigen::MatrixXd> output_volume_iteration;
       std::vector<Eigen::MatrixXd> input_channels_unrolled_return;
       ConvMatrixMultiplication({input_volume.at(i)}, {{next_grad.at(j)}}, {0},
                                0, 1, &output_volume_iteration,
                                &input_channels_unrolled_return);
+      assert(output_volume_iteration.size() == 1);
       for (const auto& o : output_volume_iteration) {
         dydw_kernels.emplace_back(o);
       }
