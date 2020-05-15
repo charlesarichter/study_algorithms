@@ -85,6 +85,8 @@ void LayerFC::BackwardPass(const std::vector<double>& input,
   const std::size_t num_weights = num_inputs_ * num_outputs_;
   const std::size_t num_biases = num_outputs_;
 
+  const Eigen::Map<const Eigen::VectorXd> input_mat(input.data(), input.size());
+
   const Eigen::Map<const Eigen::MatrixXd> activation_gradient_mat(
       activation_gradient.data(), num_outputs_, num_outputs_);
 
@@ -98,6 +100,11 @@ void LayerFC::BackwardPass(const std::vector<double>& input,
       dloss_doutput.data(), 1, num_outputs_);
 
   const Eigen::MatrixXd doutput_dinput_mat = activation_gradient_mat * W;
+  const Eigen::MatrixXd dloss_dweights_mat = activation_gradient_mat *
+                                             dloss_doutput_mat.transpose() *
+                                             input_mat.transpose();
+  const Eigen::MatrixXd dloss_dbiases_mat =
+      activation_gradient_mat * dloss_doutput_mat.transpose();
 
   const Eigen::MatrixXd dloss_dinput_mat =
       dloss_doutput_mat * doutput_dinput_mat;
@@ -105,6 +112,22 @@ void LayerFC::BackwardPass(const std::vector<double>& input,
   *dloss_dinput =
       std::vector<double>(dloss_dinput_mat.data(),
                           dloss_dinput_mat.data() + dloss_dinput_mat.size());
+
+  const std::vector<double> dloss_dweights_vec(
+      dloss_dweights_mat.data(),
+      dloss_dweights_mat.data() + dloss_dweights_mat.size());
+  const std::vector<double> dloss_dbiases_vec(
+      dloss_dbiases_mat.data(),
+      dloss_dbiases_mat.data() + dloss_dbiases_mat.size());
+
+  assert(dloss_dweights_vec.size() + dloss_dbiases_vec.size() ==
+         parameters.size());
+
+  dloss_dparams->clear();
+  dloss_dparams->insert(dloss_dparams->end(), dloss_dweights_vec.begin(),
+                        dloss_dweights_vec.end());
+  dloss_dparams->insert(dloss_dparams->end(), dloss_dbiases_vec.begin(),
+                        dloss_dbiases_vec.end());
 }
 
 int LayerConv::GetNumParameters() const {
@@ -233,14 +256,22 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
       dloss_doutput_pre_act.data(),
       dloss_doutput_pre_act.data() + dloss_doutput_pre_act.size());
 
+  const int num_biases = GetNumBiasParameters();
+  assert(dloss_doutput_pre_act_vec.size() % num_biases == 0);
+  const int num_outputs_per_bias =
+      dloss_doutput_pre_act_vec.size() / num_biases;
+
+  const Eigen::Map<const Eigen::MatrixXd> dloss_doutput_pre_act_mat(
+      dloss_doutput_pre_act_vec.data(), num_outputs_per_bias, num_biases);
+
+  const Eigen::VectorXd bias_gradient_vec =
+      dloss_doutput_pre_act_mat.colwise().sum();
+  assert(bias_gradient_vec.size() == num_biases);
+
   // Reshape dloss_doutput into iov format.
   const InputOutputVolume dloss_doutput_iov(dloss_doutput_pre_act_vec,
                                             num_kernels_, GetOutputRows(),
                                             GetOutputCols());
-
-  // TODO: Still need to incorporate activation gradient!
-  const InputOutputVolume activation_gradient_iov(
-      activation_gradient, num_kernels_, GetOutputRows(), GetOutputCols());
 
   const std::vector<Eigen::MatrixXd> dloss_doutput_volume =
       dloss_doutput_iov.GetVolume();
@@ -248,6 +279,18 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
   const std::vector<Eigen::MatrixXd> dloss_dinput_volume =
       ConvGradient(conv_kernels, dloss_doutput_volume);
 
+  const std::vector<Eigen::MatrixXd> dloss_dweights_volume =
+      ConvWeightGradient(input_volume.GetVolume(), dloss_doutput_volume);
+
   const InputOutputVolume dloss_dinput_iov(dloss_dinput_volume);
   *dloss_dinput = dloss_dinput_iov.GetValues();
+
+  const InputOutputVolume dloss_dweights_iov(dloss_dweights_volume);
+  *dloss_dparams = dloss_dweights_iov.GetValues();
+
+  const std::vector<double> dloss_dbiases(
+      bias_gradient_vec.data(), bias_gradient_vec.data() + num_biases);
+
+  dloss_dparams->insert(dloss_dparams->end(), dloss_dbiases.begin(),
+                        dloss_dbiases.end());
 }
