@@ -84,6 +84,7 @@ void RunNetworkTest() {
 
   // Perturbation.
   const double delta = 1e-6;
+  const double tol = 1e-6;
 
   // Estimate input gradient numerically.
   for (int i = 0; i < input.size(); ++i) {
@@ -97,11 +98,13 @@ void RunNetworkTest() {
         network.Evaluate(input_delta, label, parameters, &input_gradient_delta,
                          &param_gradient_delta);
 
-    std::cerr << "Analytical loss: " << loss
-              << " Perturbed loss: " << loss_delta
-              << " Analytical gradient: " << input_gradient.at(i)
-              << " Numerical gradient: " << (loss_delta - loss) / delta
-              << std::endl;
+    const double numerical_gradient = (loss_delta - loss) / delta;
+    if (std::abs(numerical_gradient - input_gradient.at(i)) > tol) {
+      std::cerr << "Incorrect input gradient:"
+                << " Analytical gradient: " << input_gradient.at(i)
+                << " Numerical gradient: " << (loss_delta - loss) / delta
+                << std::endl;
+    }
   }
 
   // Estimate weight gradient numerically.
@@ -116,9 +119,12 @@ void RunNetworkTest() {
         network.Evaluate(input, label, parameters_delta, &input_gradient_delta,
                          &param_gradient_delta);
 
-    std::cerr << "Analytical loss: " << loss
-              << " Perturbed loss: " << loss_delta
-              << " Analytical gradient: " << param_gradient.at(i)
-              << " Numerical gradient: " << numerical_gradient << std::endl;
+    const double numerical_gradient = (loss_delta - loss) / delta;
+    if (std::abs(numerical_gradient - param_gradient.at(i)) > tol) {
+      std::cerr << "Incorrect param gradient:"
+                << " Analytical gradient: " << param_gradient.at(i)
+                << " Numerical gradient: " << (loss_delta - loss) / delta
+                << std::endl;
+    }
   }
 }
