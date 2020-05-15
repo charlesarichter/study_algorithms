@@ -85,13 +85,13 @@ void RunNetworkTest() {
   // Perturbation.
   const double delta = 1e-6;
 
-  // Estimate gradient numerically.
-  std::vector<double> input_gradient_delta;
-  std::vector<double> param_gradient_delta;
-
+  // Estimate input gradient numerically.
   for (int i = 0; i < input.size(); ++i) {
     std::vector<double> input_delta = input;
     input_delta.at(i) += delta;
+
+    std::vector<double> input_gradient_delta;
+    std::vector<double> param_gradient_delta;
 
     const double loss_delta =
         network.Evaluate(input_delta, label, parameters, &input_gradient_delta,
@@ -102,5 +102,23 @@ void RunNetworkTest() {
               << " Analytical gradient: " << input_gradient.at(i)
               << " Numerical gradient: " << (loss_delta - loss) / delta
               << std::endl;
+  }
+
+  // Estimate weight gradient numerically.
+  for (int i = 0; i < parameters.size(); ++i) {
+    std::vector<double> parameters_delta = parameters;
+    parameters_delta.at(i) += delta;
+
+    std::vector<double> input_gradient_delta;
+    std::vector<double> param_gradient_delta;
+
+    const double loss_delta =
+        network.Evaluate(input, label, parameters_delta, &input_gradient_delta,
+                         &param_gradient_delta);
+
+    std::cerr << "Analytical loss: " << loss
+              << " Perturbed loss: " << loss_delta
+              << " Analytical gradient: " << param_gradient.at(i)
+              << " Numerical gradient: " << numerical_gradient << std::endl;
   }
 }
