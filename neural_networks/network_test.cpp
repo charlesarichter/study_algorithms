@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "mnist.hpp"
 #include "network.hpp"
 #include "nn.hpp"
 #include "training.hpp"
@@ -169,6 +170,98 @@ void RunNetworkLearningTest() {
     AdamOptimizer(parameters, param_gradient, first_moment, second_moment, i,
                   &updated_network_params, &updated_first_moment,
                   &updated_second_moment);
+
+    parameters = updated_network_params;
+    first_moment = updated_first_moment;
+    second_moment = updated_second_moment;
+  }
+}
+
+void RunNetworkMnistTest() {
+  const int num_training_images = 60000;
+  const int num_test_images = 10000;
+  // Load training data.
+  std::vector<Eigen::VectorXd> training_images;
+  std::vector<Eigen::VectorXd> training_labels;
+  LoadMnist("../data/mnist_train.csv", num_training_images, &training_images,
+            &training_labels);
+
+  // Load test data.
+  std::vector<Eigen::VectorXd> test_images;
+  std::vector<Eigen::VectorXd> test_labels;
+  LoadMnist("../data/mnist_test.csv", num_test_images, &test_images,
+            &test_labels);
+
+  std::cerr << "Loaded data" << std::endl;
+
+  // Create network.
+  const int input_size = 28;
+  const int input_channels = 1;
+  const int num_categories = 10;
+  const Network network =
+      BuildTestNetwork(input_channels, input_size, input_size, num_categories);
+
+  // Get initial set of parameters.
+  std::vector<double> parameters = network.GetRandomParameters();
+
+  std::cerr << "Loaded network" << std::endl;
+
+  const int batch_size = 100;
+  const int num_batches = num_training_images / batch_size;
+
+  // Get randomly ordered training image indices.
+  std::vector<int> indices(num_training_images);
+  std::iota(indices.begin(), indices.end(), 0);
+  std::random_shuffle(indices.begin(), indices.end());
+
+  std::vector<double> first_moment(parameters.size(), 0);
+  std::vector<double> second_moment(parameters.size(), 0);
+
+  for (int i = 0; i < num_batches; ++i) {
+    std::vector<double> param_gradient_batch_sum(parameters.size(), 0);
+    double loss_batch_sum = 0;
+    for (int j = 0; j < batch_size; ++j) {
+      const int index = indices.at(i * batch_size + j);
+      const Eigen::VectorXd& training_image_vec = training_images.at(index);
+      const std::vector<double> training_image(
+          training_image_vec.data(),
+          training_image_vec.data() + training_image_vec.size());
+      const Eigen::VectorXd& training_label_vec = training_labels.at(index);
+      const std::vector<double> training_label(
+          training_label_vec.data(),
+          training_label_vec.data() + training_label_vec.size());
+
+      // Evaluate network.
+      std::vector<double> input_gradient;
+      std::vector<double> param_gradient;
+      const double loss =
+          network.Evaluate(training_image, training_label, parameters,
+                           &input_gradient, &param_gradient);
+
+      loss_batch_sum += loss;
+
+      // Add gradient to batch sum.
+      std::transform(param_gradient_batch_sum.begin(),
+                     param_gradient_batch_sum.end(), param_gradient.begin(),
+                     param_gradient_batch_sum.begin(), std::plus<double>());
+    }
+
+    const double loss_batch_mean = loss_batch_sum / batch_size;
+    std::cerr << "Loss (batch mean): " << loss_batch_mean << std::endl;
+
+    // Compute batch mean gradient.
+    std::vector<double> param_gradient_batch_mean(parameters.size());
+    std::transform(
+        param_gradient_batch_sum.begin(), param_gradient_batch_sum.end(),
+        param_gradient_batch_mean.begin(),
+        [](const double& batch_sum) { return batch_sum / batch_size; });
+
+    std::vector<double> updated_network_params;
+    std::vector<double> updated_first_moment;
+    std::vector<double> updated_second_moment;
+    AdamOptimizer(parameters, param_gradient_batch_mean, first_moment,
+                  second_moment, i, &updated_network_params,
+                  &updated_first_moment, &updated_second_moment);
 
     parameters = updated_network_params;
     first_moment = updated_first_moment;

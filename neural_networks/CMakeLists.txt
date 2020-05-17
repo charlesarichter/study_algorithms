@@ -19,7 +19,9 @@ add_library(nn
  network_test.cpp
  network_test.hpp
  training.cpp
- training.hpp)
+ training.hpp
+ mnist.cpp
+ mnist.hpp)
 
 add_executable(nn_app main.cpp)
 target_link_libraries(nn_app nn)
