@@ -750,7 +750,8 @@ int main() {
   // RunConvKernelTests();
   // RunConvGradientTests();
   // TestConvNetGradientsMultiConv();
-  RunNetworkTest();
+  // RunNetworkGradientTest();
+  RunNetworkLearningTest();
 
   return 0;
 }

@@ -1,3 +1,4 @@
 #pragma once
 
-void RunNetworkTest();
+void RunNetworkGradientTest();
+void RunNetworkLearningTest();

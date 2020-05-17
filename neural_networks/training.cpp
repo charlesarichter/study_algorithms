@@ -280,3 +280,71 @@ NeuralNetworkParameters Train(
   }
   return nn;
 }
+
+void AdamOptimizer(const std::vector<double>& current_network_params,
+                   const std::vector<double>& current_param_gradients,
+                   const std::vector<double>& current_first_moment,
+                   const std::vector<double>& current_second_moment,
+                   const int iteration,
+                   std::vector<double>* updated_network_params,
+                   std::vector<double>* updated_first_moment,
+                   std::vector<double>* updated_second_moment) {
+  // Constants from the paper: https://arxiv.org/pdf/1412.6980.pdf
+  double alpha = 0.001;
+  double beta1 = 0.9;
+  double beta2 = 0.999;
+  double eps = 1e-8;
+  int t = iteration + 1;
+
+  // Require: α: Stepsize
+  // Require: β1, β2 ∈ [0, 1): Exponential decay rates for the moment estimates
+  // Require: f(θ): Stochastic objective function with parameters θ
+  // Require: θ0: Initial parameter vector
+  // m0 ← 0 (Initialize 1st moment vector)
+  // v0 ← 0 (Initialize 2nd moment vector)
+  // t ← 0 (Initialize timestep)
+  // while θt not converged do
+  //  t ← t + 1
+  //  gt ← ∇θft(θt−1) (Get gradients w.r.t. stochastic objective at timestep t)
+  //  mt ← β1 · mt−1 + (1 − β1) · gt (Update biased first moment estimate)
+  //  vt ← β2 · vt−1 + (1 − β2) · gt^2 (Update biased second raw moment est)
+  //  m^hat_t ← mt/(1 − β_1^t) (Compute bias-corrected first moment estimate)
+  //  v^hat_t ← vt/(1 − β_2^t) (Compute bias-corrected second raw moment est)
+  //  θt ← θt−1 − α · m^hat_t/(√v^hat_t + epsilon) (Update parameters)
+  // end while
+  // return θt(Resulting parameters)
+
+  std::vector<double> mt(current_network_params.size(), 0);
+  std::vector<double> vt(current_network_params.size(), 0);
+  std::vector<double> mhat_t(current_network_params.size(), 0);
+  std::vector<double> vhat_t(current_network_params.size(), 0);
+
+  updated_network_params->resize(current_network_params.size(), 0);
+
+  // Loop over all parameters in the network.
+  for (size_t i = 0; i < current_network_params.size(); ++i) {
+    const double& param = current_network_params.at(i);
+    const double& gradient = current_param_gradients.at(i);
+
+    // mt ← β1 · mt−1 + (1 − β1) · gt (Update biased first moment estimate)
+    mt.at(i) = beta1 * current_first_moment.at(i) + (1 - beta1) * gradient;
+
+    // vt ← β2 · vt−1 + (1 − β2) · gt^2 (Update biased second raw moment est)
+    vt.at(i) =
+        beta2 * current_second_moment.at(i) + (1 - beta2) * gradient * gradient;
+
+    // m^hat_t ← mt/(1 − β_1^t) (Compute bias-corrected first moment estimate)
+    mhat_t.at(i) = mt.at(i) / (1 - pow(beta1, t));
+
+    // v^hat_t ← vt/(1 − β_2^t) (Compute bias-corrected second raw moment est)
+    vhat_t.at(i) = vt.at(i) / (1 - pow(beta2, t));
+
+    // θt ← θt−1 − α · m^hat_t/(√v^hat_t + epsilon) (Update parameters)
+    updated_network_params->at(i) =
+        param - alpha * mhat_t.at(i) / (sqrt(vhat_t.at(i)) + 1);
+  }
+
+  // TODO: Eliminate unnecessary copies and memory allocation.
+  *updated_first_moment = mt;
+  *updated_second_moment = vt;
+}

@@ -31,3 +31,12 @@ void AdamOptimizer(const NeuralNetworkParameters& current_network_params,
                    const int iteration,
                    NeuralNetworkParameters* updated_network_params,
                    AdamOptimizerParameters* updated_optimizer_params);
+
+void AdamOptimizer(const std::vector<double>& current_network_params,
+                   const std::vector<double>& current_param_gradients,
+                   const std::vector<double>& current_first_moment,
+                   const std::vector<double>& current_second_moment,
+                   const int iteration,
+                   std::vector<double>* updated_network_params,
+                   std::vector<double>* updated_first_moment,
+                   std::vector<double>* updated_second_moment);

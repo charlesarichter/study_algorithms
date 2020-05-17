@@ -4,8 +4,10 @@
 
 #include "network.hpp"
 #include "nn.hpp"
+#include "training.hpp"
 
-void RunNetworkTest() {
+static Network BuildTestNetwork(const int input_channels, const int input_rows,
+                                const int input_cols, const int num_outputs) {
   // Specify conv layers.
   const int num_kernels = 3;
   const int kernel_size = 2;  // TODO: Enable non-square kernels.
@@ -17,17 +19,9 @@ void RunNetworkTest() {
   const ActivationFunction activation_function = ActivationFunction::SIGMOID;
   const ActivationFunction output_function = ActivationFunction::SOFTMAX;
 
-  // Define input.
-  const int input_size = 10;  // TODO: Enable non-square inputs.
-  const int num_input_channels = 3;
-
-  // Define output.
-  // Assume multi-class classification, one-hot representation.
-  const int num_categories = 10;
-
   // Define layers.
   LayerConvPtr layer_0 = std::make_shared<LayerConv>(
-      input_size, input_size, num_input_channels, kernel_size, kernel_size,
+      input_rows, input_cols, input_channels, kernel_size, kernel_size,
       num_kernels, stride, activation_function);
 
   const int layer_0_output_rows = layer_0->GetOutputRows();
@@ -59,10 +53,19 @@ void RunNetworkTest() {
       std::make_shared<LayerFC>(num_nodes, num_nodes, activation_function);
 
   LayerFCPtr layer_5 =
-      std::make_shared<LayerFC>(num_nodes, num_categories, output_function);
+      std::make_shared<LayerFC>(num_nodes, num_outputs, output_function);
 
   // Build network.
-  Network network({layer_0, layer_1, layer_2, layer_3, layer_4, layer_5});
+  return Network({layer_0, layer_1, layer_2, layer_3, layer_4, layer_5});
+}
+
+void RunNetworkGradientTest() {
+  // Create network.
+  const int input_size = 10;  // TODO: Enable non-square inputs.
+  const int input_channels = 3;
+  const int num_categories = 10;
+  const Network network =
+      BuildTestNetwork(input_channels, input_size, input_size, num_categories);
 
   // Get initial set of parameters.
   std::vector<double> parameters = network.GetRandomParameters();
@@ -70,7 +73,7 @@ void RunNetworkTest() {
   // Generate random input.
   // TODO: Consider scaling, centering, normalization of input.
   const std::vector<double> input =
-      GetRandomVector(input_size * input_size * num_input_channels, 0, 1);
+      GetRandomVector(input_size * input_size * input_channels, 0, 1);
 
   // Generate arbitrary label.
   std::vector<double> label(num_categories, 0);
@@ -126,5 +129,49 @@ void RunNetworkTest() {
                 << " Numerical gradient: " << (loss_delta - loss) / delta
                 << std::endl;
     }
+  }
+}
+
+void RunNetworkLearningTest() {
+  // Create network.
+  const int input_size = 10;  // TODO: Enable non-square inputs.
+  const int input_channels = 3;
+  const int num_categories = 10;
+  const Network network =
+      BuildTestNetwork(input_channels, input_size, input_size, num_categories);
+
+  // Get initial set of parameters.
+  std::vector<double> parameters = network.GetRandomParameters();
+
+  // Generate random input.
+  // TODO: Consider scaling, centering, normalization of input.
+  const std::vector<double> input =
+      GetRandomVector(input_size * input_size * input_channels, 0, 1);
+
+  // Generate arbitrary label.
+  std::vector<double> label(num_categories, 0);
+  label.front() = 1;
+
+  std::vector<double> first_moment(parameters.size(), 0);
+  std::vector<double> second_moment(parameters.size(), 0);
+  for (int i = 0; i < 1000; ++i) {
+    // Evaluate network.
+    std::vector<double> input_gradient;
+    std::vector<double> param_gradient;
+    const double loss = network.Evaluate(input, label, parameters,
+                                         &input_gradient, &param_gradient);
+
+    std::cerr << "Loss: " << loss << std::endl;
+
+    std::vector<double> updated_network_params;
+    std::vector<double> updated_first_moment;
+    std::vector<double> updated_second_moment;
+    AdamOptimizer(parameters, param_gradient, first_moment, second_moment, i,
+                  &updated_network_params, &updated_first_moment,
+                  &updated_second_moment);
+
+    parameters = updated_network_params;
+    first_moment = updated_first_moment;
+    second_moment = updated_second_moment;
   }
 }
