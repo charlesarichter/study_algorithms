@@ -2,6 +2,9 @@
 
 #include "conv.hpp"
 
+#include <eigen3/Eigen/Core>
+#include <eigen3/unsupported/Eigen/FFT>
+
 void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
           const std::vector<std::vector<Eigen::MatrixXd>>& conv_kernels,
           const std::vector<double>& biases, const int padding,
@@ -318,3 +321,5 @@ std::vector<Eigen::MatrixXd> BuildConvInputMatrix(
   }
   return input_channels_unrolled;
 }
+
+void ConvFFT() { Eigen::FFT<float> fft; }

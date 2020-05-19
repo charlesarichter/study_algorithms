@@ -90,3 +90,5 @@ std::vector<Eigen::MatrixXd> PadVolume(
 std::vector<Eigen::MatrixXd> BuildConvInputMatrix(
     const std::vector<Eigen::MatrixXd>& input_volume, const int kernel_rows,
     const int kernel_cols, const int stride);
+
+void ConvFFT();
