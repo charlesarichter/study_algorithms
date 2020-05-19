@@ -57,7 +57,7 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
           const size_t min_ind_row = l * stride;
 
           // Extract sub-matrix we want to multiply.
-          const Eigen::MatrixXd input_region = input_channel.block(
+          const Eigen::MatrixXd& input_region = input_channel.block(
               min_ind_row, min_ind_col, kernel_rows, kernel_cols);
 
           // std::cerr << "Min row: " << min_ind_row << std::endl;
@@ -120,8 +120,11 @@ void ConvMatrixMultiplication(
   // Convert input channels to their "unrolled" form so that each column of each
   // channel represents the set of elements that will be multiplied by the
   // kernel placed in a certain location.
+  // const std::vector<Eigen::MatrixXd> input_channels_unrolled =
+  //     BuildConvInputMatrix(input_volume, kernel_rows, kernel_cols, stride);
   const std::vector<Eigen::MatrixXd> input_channels_unrolled =
-      BuildConvInputMatrix(input_volume, kernel_rows, kernel_cols, stride);
+      BuildConvInputMatrixElementWise(input_volume, kernel_rows, kernel_cols,
+                                      stride);
 
   // Convert kernels to their unrolled form.
   std::vector<std::vector<Eigen::VectorXd>> conv_kernels_unrolled;
@@ -300,14 +303,13 @@ std::vector<Eigen::MatrixXd> BuildConvInputMatrix(
     const Eigen::MatrixXd& input_channel = input_volume.at(j);
     Eigen::MatrixXd input_channel_unrolled =
         Eigen::MatrixXd::Zero(num_kernel_elements_per_channel, num_steps_total);
-
     for (int k = 0; k < num_steps_horizontal; ++k) {
       const int min_ind_col = k * stride;
       for (int l = 0; l < num_steps_vertical; ++l) {
         const int min_ind_row = l * stride;
 
         // Extract sub-matrix we want to multiply.
-        const Eigen::MatrixXd input_region = input_channel.block(
+        const Eigen::MatrixXd& input_region = input_channel.block(
             min_ind_row, min_ind_col, kernel_rows, kernel_cols);
         const int ind = l + k * num_steps_vertical;  // 0, 1, 2, 3,...
         input_channel_unrolled.col(ind) = Eigen::Map<const Eigen::VectorXd>(
@@ -315,6 +317,47 @@ std::vector<Eigen::MatrixXd> BuildConvInputMatrix(
       }
     }
     input_channels_unrolled.emplace_back(std::move(input_channel_unrolled));
+  }
+  return input_channels_unrolled;
+}
+
+std::vector<Eigen::MatrixXd> BuildConvInputMatrixElementWise(
+    const std::vector<Eigen::MatrixXd>& input_volume, const int kernel_rows,
+    const int kernel_cols, const int stride) {
+  // Unpack and calculate constants.
+  const int num_channels = input_volume.size();
+  const int input_rows = input_volume.front().rows();
+  const int input_cols = input_volume.front().cols();
+  const int num_steps_vertical = (input_rows - kernel_rows) / stride + 1;
+  const int num_steps_horizontal = (input_cols - kernel_cols) / stride + 1;
+  const int num_steps_total = num_steps_horizontal * num_steps_vertical;
+  const int num_kernel_elements_per_channel = kernel_cols * kernel_rows;
+
+  // Build input matrix.
+  std::vector<Eigen::MatrixXd> input_channels_unrolled;
+  for (int j = 0; j < num_channels; ++j) {
+    const Eigen::MatrixXd& input_channel = input_volume.at(j);
+    std::vector<double> input_channel_unrolled(num_kernel_elements_per_channel *
+                                               num_steps_total);
+
+    for (int k = 0; k < num_steps_horizontal; ++k) {
+      const int min_ind_col = k * stride;
+      for (int l = 0; l < num_steps_vertical; ++l) {
+        const int min_ind_row = l * stride;
+        for (int n = min_ind_col; n < (min_ind_col + kernel_cols); ++n) {
+          for (int m = min_ind_row; m < (min_ind_row + kernel_rows); ++m) {
+            const int ind = (m - min_ind_row) +
+                            (n - min_ind_col) * kernel_rows +
+                            l * kernel_cols * kernel_rows +
+                            k * kernel_cols * kernel_rows * num_steps_vertical;
+            input_channel_unrolled[ind] = input_channel.coeff(m, n);
+          }
+        }
+      }
+    }
+    input_channels_unrolled.emplace_back(Eigen::Map<Eigen::MatrixXd>(
+        input_channel_unrolled.data(), kernel_rows * kernel_cols,
+        num_steps_horizontal * num_steps_vertical));
   }
   return input_channels_unrolled;
 }
