@@ -57,7 +57,7 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
           const size_t min_ind_row = l * stride;
 
           // Extract sub-matrix we want to multiply.
-          const Eigen::MatrixXd input_region = input_channel.block(
+          const Eigen::MatrixXd& input_region = input_channel.block(
               min_ind_row, min_ind_col, kernel_rows, kernel_cols);
 
           // std::cerr << "Min row: " << min_ind_row << std::endl;
@@ -300,14 +300,13 @@ std::vector<Eigen::MatrixXd> BuildConvInputMatrix(
     const Eigen::MatrixXd& input_channel = input_volume.at(j);
     Eigen::MatrixXd input_channel_unrolled =
         Eigen::MatrixXd::Zero(num_kernel_elements_per_channel, num_steps_total);
-
     for (int k = 0; k < num_steps_horizontal; ++k) {
       const int min_ind_col = k * stride;
       for (int l = 0; l < num_steps_vertical; ++l) {
         const int min_ind_row = l * stride;
 
         // Extract sub-matrix we want to multiply.
-        const Eigen::MatrixXd input_region = input_channel.block(
+        const Eigen::MatrixXd& input_region = input_channel.block(
             min_ind_row, min_ind_col, kernel_rows, kernel_cols);
         const int ind = l + k * num_steps_vertical;  // 0, 1, 2, 3,...
         input_channel_unrolled.col(ind) = Eigen::Map<const Eigen::VectorXd>(
