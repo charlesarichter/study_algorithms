@@ -12,6 +12,38 @@ std::vector<double> Network::GetRandomParameters() const {
   return parameters;
 }
 
+std::vector<double> Network::Evaluate(
+    const std::vector<double>& input, const std::vector<double>& label,
+    const std::vector<double>& parameters) const {
+  // Iterator indicating the beginning of the current layer's parameters.
+  auto param_begin = parameters.begin();
+
+  // Initialize input.
+  std::vector<double> layer_input = input;
+
+  // Foward pass.
+  for (const LayerPtr& layer : layers_) {
+    // Get parameters for this layer. TODO: Reduce/avoid copies.
+    const int num_params = layer->GetNumParameters();
+    const std::vector<double> layer_param(param_begin,
+                                          param_begin + num_params);
+
+    // Evaluate layer.
+    std::vector<double> layer_output;
+    std::vector<double> layer_activation_gradient;
+    layer->ForwardPass(layer_input, layer_param, &layer_output,
+                       &layer_activation_gradient);
+
+    // Copy output to next layer's input.
+    layer_input = layer_output;
+
+    // Advance the param iterator.
+    param_begin += num_params;
+  }
+
+  return layer_input;
+}
+
 double Network::Evaluate(const std::vector<double>& input,
                          const std::vector<double>& label,
                          const std::vector<double>& parameters,

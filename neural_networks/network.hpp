@@ -22,6 +22,14 @@ class Network {
                   std::vector<double>* input_gradient,
                   std::vector<double>* param_gradient) const;
 
+  /**
+   * Evaluates network using provided input and parameters but does not compute
+   * or return gradients.
+   */
+  std::vector<double> Evaluate(const std::vector<double>& input,
+                               const std::vector<double>& label,
+                               const std::vector<double>& parameters) const;
+
  private:
   std::vector<LayerPtr> layers_;
 };
