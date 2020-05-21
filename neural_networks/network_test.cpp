@@ -7,6 +7,58 @@
 #include "nn.hpp"
 #include "training.hpp"
 
+static void EvaulateNetworkPerformance(
+    const Network& network, const std::vector<double>& parameters,
+    const std::vector<Eigen::VectorXd>& inputs,
+    const std::vector<Eigen::VectorXd>& labels) {
+  int num_correct = 0;
+  int num_evaluate = 1000;
+
+  // Randomly sample num_evaluate test imgaes.
+  std::vector<std::size_t> eval_indices(num_evaluate);
+  std::iota(eval_indices.begin(), eval_indices.end(), 0);
+  std::random_shuffle(eval_indices.begin(), eval_indices.end());
+
+  std::vector<int> histogram(10, 0);
+
+  for (int i = 0; i < eval_indices.size(); ++i) {
+    const std::size_t ind = eval_indices.at(i);
+    const Eigen::VectorXd& input_vec = inputs.at(ind);
+    const Eigen::VectorXd& label_vec = labels.at(ind);
+    const std::vector<double> input(input_vec.data(),
+                                    input_vec.data() + input_vec.size());
+    const std::vector<double> label(label_vec.data(),
+                                    label_vec.data() + label_vec.size());
+    const std::vector<double> output =
+        network.Evaluate(input, label, parameters);
+
+    // Compute max element of output.
+    const std::size_t predicted_index = std::distance(
+        output.begin(), std::max_element(output.begin(), output.end()));
+    const std::size_t label_index = std::distance(
+        label.begin(), std::max_element(label.begin(), label.end()));
+
+    assert(predicted_index >= 0);
+    assert(predicted_index < 10);
+    assert(label_index >= 0);
+    assert(label_index < 10);
+
+    if (predicted_index == label_index) {
+      ++num_correct;
+    }
+
+    ++histogram.at(predicted_index);
+  }
+
+  const double pct = 100 * double(num_correct) / double(num_evaluate);
+  std::cerr << "Correctly predicted " << pct << "%" << std::endl;
+  std::cerr << "Histogram of predictions: ";
+  for (int i = 0; i < histogram.size(); ++i) {
+    std::cerr << histogram.at(i) << ", ";
+  }
+  std::cerr << std::endl;
+}
+
 static Network BuildTestNetwork(const int input_channels, const int input_rows,
                                 const int input_cols, const int num_outputs) {
   // Specify conv layers.
@@ -266,5 +318,9 @@ void RunNetworkMnistTest() {
     parameters = updated_network_params;
     first_moment = updated_first_moment;
     second_moment = updated_second_moment;
+
+    // Evaluate performance.
+    std::cerr << "Evaluating..." << std::endl;
+    EvaulateNetworkPerformance(network, parameters, test_images, test_labels);
   }
 }
