@@ -42,7 +42,13 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
  * -https://medium.com/@_init_/an-illustrated-explanation-of-performing-2d-convolutions-using-matrix-multiplications-1e8de8cd2544
  *
  * VERY helpful reference on computing gradients and backprop for conv layers:
- * - https://medium.com/@pavisj/convolutions-and-backpropagations-46026a8f5d2c
+ * -https://medium.com/@pavisj/convolutions-and-backpropagations-46026a8f5d2c
+ *
+ * Great survey including some good visualizations of conv as matrix mult.:
+ * -https://arxiv.org/abs/1703.09039
+ *
+ * Transpose convolution:
+ * -https://towardsdatascience.com/what-is-transposed-convolutional-layer-40e5e6e31c11
  *
  * Notes:
  * -Can copy filters into a sparse Toeplitz matrix
