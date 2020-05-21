@@ -5,7 +5,7 @@
 double GetWeightCoefficient(const ActivationFunction& activation_function) {
   switch (activation_function) {
     case ActivationFunction::RELU: {
-      return 0.001;
+      return 0.1;
     }
     case ActivationFunction::SIGMOID: {
       return 0.1;
