@@ -360,6 +360,107 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
   return output;
 }
 
+std::vector<double> Activation(const std::vector<double>& input,
+                               const ActivationFunction activation_function,
+                               std::vector<double>* activation_gradient) {
+  std::vector<double> output(input.size());
+  switch (activation_function) {
+    case ActivationFunction::LINEAR: {
+      output = input;
+
+      // Slope of one.
+      // Construct identity matrix elementwise.
+      *activation_gradient =
+          std::vector<double>(input.size() * input.size(), 0);
+      for (size_t i = 0; i < input.size(); ++i) {
+        const std::size_t ind = i + i * input.size();
+        activation_gradient->at(ind) = 1;
+      }
+
+      break;
+    }
+    case ActivationFunction::RELU: {
+      *activation_gradient =
+          std::vector<double>(input.size() * input.size(), 0);
+      for (size_t i = 0; i < input.size(); ++i) {
+        const std::size_t ind = i + i * input.size();
+        if (input.at(i) <= 0) {
+          output.at(i) = 0;
+          // Don't need to set this since gradient is zero initialized.
+          // activation_gradient->at(ind) = 0;
+        } else {
+          output.at(i) = input.at(i);
+          activation_gradient->at(ind) = 1;
+        }
+      }
+      break;
+    }
+    case ActivationFunction::SIGMOID: {
+      // The "Sigmoid" (a.k.a. "Logistic") function squashes each element in
+      // the input into the range (0,1). These outputs are independent of
+      // one another. There is no normalization across all the outputs
+      // resulting from a vector of inputs (unlike Softmax, which is
+      // normalized across outputs).
+      *activation_gradient =
+          std::vector<double>(input.size() * input.size(), 0);
+      for (size_t i = 0; i < input.size(); ++i) {
+        const std::size_t ind = i + i * input.size();
+        const double f = 1 / (1 + exp(-1 * input.at(i)));
+        output.at(i) = f;
+        activation_gradient->at(ind) = f * (1 - f);
+      }
+      break;
+    }
+    case ActivationFunction::SOFTMAX: {
+      // The Softmax function is a multi-dimensional generalization of the
+      // logistic function. When the number of output dimensions is 2, the
+      // softmax function is equivalent to the logistic function. One of the
+      // outputs represents the probability that the coin flip result is
+      // "heads" and the other output represents the probability that the
+      // coin flip result is "tails" (i.e., the complement).
+      std::vector<double> result_unnormalized(input.size(), 0);
+      double activation_sum = 0;
+      for (size_t i = 0; i < input.size(); ++i) {
+        double activation_unnormalized = exp(input.at(i));
+        result_unnormalized.at(i) = activation_unnormalized;
+        activation_sum += activation_unnormalized;
+      }
+      std::transform(result_unnormalized.begin(), result_unnormalized.end(),
+                     output.begin(), [activation_sum](const double& r) {
+                       return r / activation_sum;
+                     });
+      *activation_gradient =
+          std::vector<double>(input.size() * input.size(), 0);
+      for (size_t i = 0; i < input.size(); ++i) {
+        for (size_t j = 0; j < input.size(); ++j) {
+          const std::size_t ind = j + i * input.size();
+
+          const double kroneker_delta = (i == j) ? 1.0 : 0.0;
+          activation_gradient->at(ind) =
+              output.at(i) * (kroneker_delta - output.at(j));
+        }
+      }
+      // Gradient of softmax: f_i(x)*(kroneker_delta_ij - f_j(x))
+      // where f_i(x) = exp(x_i) / sum_j^N(exp(x_j)
+      //
+      // Kroneker delta: 1 when i = j and 0 when i != j.
+      //
+      // NOTE: The softmax gradient will be a matrix. Also, note that for
+      // the other activation functions implemented so far, that gradient
+      // matrix is diagonal, so it's possible that there is a bug throughout
+      // all of the code requiring all gradient matrices to be transposed to
+      // be correct for dense, non-symmetric gradient matrices. It would be
+      // a good idea to run a test to find that out.
+      break;
+    }
+    default: {
+      throw std::runtime_error("Invalid activation type.");
+      break;
+    }
+  }
+  return output;
+}
+
 Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,
                      const LossFunction loss_function,
                      Eigen::VectorXd* loss_gradient) {
