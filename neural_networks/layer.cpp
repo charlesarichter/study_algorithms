@@ -49,21 +49,14 @@ void LayerFC::ForwardPass(const std::vector<double>& input,
                                             num_biases);
 
   // Compute pre-activation result.
-  const Eigen::VectorXd pre_activation = W * input_vec + b;
+  const Eigen::VectorXd pre_activation_vec = W * input_vec + b;
+  const std::vector<double> pre_activation(
+      pre_activation_vec.data(),
+      pre_activation_vec.data() + pre_activation_vec.size());
 
-  // Compute post-activation result and gradient.
-  // TODO: Consider implementing Activation function to operate directly on
-  // std::vector<double> input.
-  Eigen::MatrixXd activation_gradient_mat;
-  const Eigen::VectorXd post_activation = Activation(
-      pre_activation, activation_function_, &activation_gradient_mat);
-
-  *output = std::vector<double>(
-      post_activation.data(), post_activation.data() + post_activation.size());
-
-  *activation_gradient = std::vector<double>(
-      activation_gradient_mat.data(),
-      activation_gradient_mat.data() + activation_gradient_mat.size());
+  // Compute activation and gradient.
+  *output =
+      Activation(pre_activation, activation_function_, activation_gradient);
 }
 
 void LayerFC::BackwardPass(const std::vector<double>& input,
@@ -197,22 +190,10 @@ void LayerConv::ForwardPass(const std::vector<double>& input,
     output_values.insert(output_values.end(), output_channel_vector.begin(),
                          output_channel_vector.end());
   }
-  const Eigen::VectorXd pre_activation =
-      Eigen::Map<Eigen::VectorXd>(output_values.data(), output_values.size());
 
-  // Compute post-activation result and gradient.
-  // TODO: Consider implementing Activation function to operate directly on
-  // std::vector<double> input.
-  Eigen::MatrixXd activation_gradient_mat;
-  const Eigen::VectorXd post_activation = Activation(
-      pre_activation, activation_function_, &activation_gradient_mat);
-
-  *output = std::vector<double>(
-      post_activation.data(), post_activation.data() + post_activation.size());
-
-  *activation_gradient = std::vector<double>(
-      activation_gradient_mat.data(),
-      activation_gradient_mat.data() + activation_gradient_mat.size());
+  // Compute activation and gradient.
+  *output =
+      Activation(output_values, activation_function_, activation_gradient);
 }
 
 void LayerConv::BackwardPass(const std::vector<double>& input,
