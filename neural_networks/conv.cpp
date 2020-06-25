@@ -47,39 +47,22 @@ void Conv(const std::vector<Eigen::MatrixXd>& input_volume_unpadded,
     for (size_t j = 0; j < conv_kernel.size(); ++j) {
       const Eigen::MatrixXd& input_channel = input_volume.at(j);
       const Eigen::MatrixXd& kernel_channel = conv_kernel.at(j);
-
-      //   std::cerr << "Kernel channel:" << std::endl
-      // << kernel_channel << std::endl;
-
       for (size_t k = 0; k < num_steps_horizontal; ++k) {
         const size_t min_ind_col = k * stride;
         for (size_t l = 0; l < num_steps_vertical; ++l) {
           const size_t min_ind_row = l * stride;
 
           // Extract sub-matrix we want to multiply.
+          // NOTE: This line takes about 60% of this function's time.
           const Eigen::MatrixXd& input_region = input_channel.block(
               min_ind_row, min_ind_col, kernel_rows, kernel_cols);
 
-          // std::cerr << "Min row: " << min_ind_row << std::endl;
-          // std::cerr << "Min col: " << min_ind_col << std::endl;
-          // std::cerr << "l: " << l << std::endl;
-          // std::cerr << "k: " << k << std::endl;
-          // std::cerr << "input_region:" << std::endl
-          //     << input_region << std::endl;
-          // std::cin.get();
-
+          // NOTE: This line takes about 50% of this function's time.
           filter_channel_sum(l, k) +=
               input_region.cwiseProduct(kernel_channel).sum();
-          // std::cerr << "Filter Channel Sum:" << std::endl;
-          // std::cerr << filter_channel_sum << std::endl;
-          // std::cin.get();
         }
       }
     }
-
-    // std::cerr << "Filter Channel Sum:" << std::endl;
-    // std::cerr << filter_channel_sum << std::endl;
-    // std::cin.get();
     output_volume->emplace_back(filter_channel_sum);
   }
 }

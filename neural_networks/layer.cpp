@@ -88,6 +88,8 @@ void LayerFC::BackwardPass(const std::vector<double>& input,
                                             num_biases);
 
   assert(dloss_doutput.size() == num_outputs_);
+
+  // TODO: Change this to Eigen::Map<const Eigen::VectorXd> for efficency.
   const Eigen::Map<const Eigen::MatrixXd> dloss_doutput_mat(
       dloss_doutput.data(), 1, num_outputs_);
 
@@ -225,6 +227,9 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
   const ConvKernels conv_kernels(kernel_parameters, num_kernels_,
                                  input_channels_, kernel_rows_, kernel_cols_);
 
+  // TODO: This matrix-vector multiplication is a bottleneck. Consider
+  // exploiting sparsity of activation_gradient, especially considering it's
+  // only dense for softmax activations, which we never use in a conv layer.
   const Eigen::VectorXd dloss_doutput_pre_act =
       Eigen::Map<const Eigen::MatrixXd>(activation_gradient.data(),
                                         dloss_doutput.size(),
