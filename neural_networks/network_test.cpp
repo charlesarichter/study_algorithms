@@ -62,12 +62,12 @@ static void EvaulateNetworkPerformance(
 static Network BuildTestNetwork(const int input_channels, const int input_rows,
                                 const int input_cols, const int num_outputs) {
   // Specify conv layers.
-  const int num_kernels = 3;
-  const int kernel_size = 2;  // TODO: Enable non-square kernels.
+  const int num_kernels = 10;
+  const int kernel_size = 3;  // TODO: Enable non-square kernels.
   const int stride = 1;
 
   // Fully connected layer width.
-  const int num_nodes = 20;
+  const int num_nodes = 50;
 
   const ActivationFunction activation_function = ActivationFunction::SIGMOID;
   const ActivationFunction output_function = ActivationFunction::SOFTMAX;
@@ -280,6 +280,7 @@ void RunNetworkMnistTest() {
     double loss_batch_sum = 0;
     for (int j = 0; j < batch_size; ++j) {
       const int index = indices.at(i * batch_size + j);
+      std::cerr << "Training image: " << index << std::endl;
       const Eigen::VectorXd& training_image_vec = training_images.at(index);
       const std::vector<double> training_image(
           training_image_vec.data(),

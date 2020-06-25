@@ -89,7 +89,7 @@ double Network::Evaluate(const std::vector<double>& input,
     // Copy output to next layer's input.
     layer_input = layer_output;
 
-    // Advance the param iterator.
+    // Advance the param index.
     param_begin += num_params;
   }
 
