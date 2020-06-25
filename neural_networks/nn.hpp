@@ -61,9 +61,10 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
 // identical results to the Eigen-based one above.
 // TODO: After confirming equivalence, make the Eigen-based version an overload
 // that interally calls this implementation.
-std::vector<double> Activation(const std::vector<double>& input,
-                               const ActivationFunction activation_function,
-                               std::vector<double>* activation_gradient);
+void Activation(const std::vector<double>& input,
+                const ActivationFunction activation_function,
+                std::vector<double>* activation,
+                std::vector<double>* activation_gradient);
 
 // TODO: Make Loss output a scalar...not sure why this ever returned a vector.
 Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,

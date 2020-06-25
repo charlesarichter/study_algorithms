@@ -55,8 +55,7 @@ void LayerFC::ForwardPass(const std::vector<double>& input,
       pre_activation_vec.data() + pre_activation_vec.size());
 
   // Compute activation and gradient.
-  *output =
-      Activation(pre_activation, activation_function_, activation_gradient);
+  Activation(pre_activation, activation_function_, output, activation_gradient);
 }
 
 void LayerFC::BackwardPass(const std::vector<double>& input,
@@ -192,8 +191,7 @@ void LayerConv::ForwardPass(const std::vector<double>& input,
   }
 
   // Compute activation and gradient.
-  *output =
-      Activation(output_values, activation_function_, activation_gradient);
+  Activation(output_values, activation_function_, output, activation_gradient);
 }
 
 void LayerConv::BackwardPass(const std::vector<double>& input,

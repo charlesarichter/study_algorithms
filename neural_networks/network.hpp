@@ -25,8 +25,7 @@ class Network {
                   const std::vector<double>& label,
                   const std::vector<double>& parameters,
                   std::vector<double>* input_gradient,
-                  std::vector<double>* param_gradient,
-                  NetworkTiming* timing) const;
+                  std::vector<double>* param_gradient, NetworkTiming* timing);
 
   /**
    * Evaluates network using provided input and parameters but does not compute
@@ -38,4 +37,9 @@ class Network {
 
  private:
   std::vector<LayerPtr> layers_;
+
+  // TODO: Compute and pre-allocate the sizes of these containers and their
+  // elements, then assert that that size is correct everywhere they are used.
+  std::vector<std::vector<double>> layer_io;
+  std::vector<std::vector<double>> layer_activation_gradients;
 };

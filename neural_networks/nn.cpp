@@ -360,18 +360,25 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
   return output;
 }
 
-std::vector<double> Activation(const std::vector<double>& input,
-                               const ActivationFunction activation_function,
-                               std::vector<double>* activation_gradient) {
-  std::vector<double> output(input.size());
+void Activation(const std::vector<double>& input,
+                const ActivationFunction activation_function,
+                std::vector<double>* activation,
+                std::vector<double>* activation_gradient) {
+  if (activation->size() != input.size()) {
+    std::cerr << "Allocating activation output data!" << std::endl;
+    activation->resize(input.size());
+  }
+  if (activation_gradient->size() != (input.size() * input.size())) {
+    std::cerr << "Allocating activation gradient output data!" << std::endl;
+    activation_gradient->resize(input.size() * input.size(), 0.0);
+  }
+
   switch (activation_function) {
     case ActivationFunction::LINEAR: {
-      output = input;
+      *activation = input;
 
       // Slope of one.
       // Construct identity matrix elementwise.
-      *activation_gradient =
-          std::vector<double>(input.size() * input.size(), 0);
       for (size_t i = 0; i < input.size(); ++i) {
         const std::size_t ind = i + i * input.size();
         activation_gradient->at(ind) = 1;
@@ -380,16 +387,14 @@ std::vector<double> Activation(const std::vector<double>& input,
       break;
     }
     case ActivationFunction::RELU: {
-      *activation_gradient =
-          std::vector<double>(input.size() * input.size(), 0);
       for (size_t i = 0; i < input.size(); ++i) {
         const std::size_t ind = i + i * input.size();
         if (input.at(i) <= 0) {
-          output.at(i) = 0;
+          activation->at(i) = 0;
           // Don't need to set this since gradient is zero initialized.
           // activation_gradient->at(ind) = 0;
         } else {
-          output.at(i) = input.at(i);
+          activation->at(i) = input.at(i);
           activation_gradient->at(ind) = 1;
         }
       }
@@ -401,12 +406,10 @@ std::vector<double> Activation(const std::vector<double>& input,
       // one another. There is no normalization across all the outputs
       // resulting from a vector of inputs (unlike Softmax, which is
       // normalized across outputs).
-      *activation_gradient =
-          std::vector<double>(input.size() * input.size(), 0);
       for (size_t i = 0; i < input.size(); ++i) {
         const std::size_t ind = i + i * input.size();
         const double f = 1 / (1 + exp(-1 * input.at(i)));
-        output.at(i) = f;
+        activation->at(i) = f;
         activation_gradient->at(ind) = f * (1 - f);
       }
       break;
@@ -426,18 +429,16 @@ std::vector<double> Activation(const std::vector<double>& input,
         activation_sum += activation_unnormalized;
       }
       std::transform(result_unnormalized.begin(), result_unnormalized.end(),
-                     output.begin(), [activation_sum](const double& r) {
+                     activation->begin(), [activation_sum](const double& r) {
                        return r / activation_sum;
                      });
-      *activation_gradient =
-          std::vector<double>(input.size() * input.size(), 0);
       for (size_t i = 0; i < input.size(); ++i) {
         for (size_t j = 0; j < input.size(); ++j) {
           const std::size_t ind = j + i * input.size();
 
           const double kroneker_delta = (i == j) ? 1.0 : 0.0;
           activation_gradient->at(ind) =
-              output.at(i) * (kroneker_delta - output.at(j));
+              activation->at(i) * (kroneker_delta - activation->at(j));
         }
       }
       // Gradient of softmax: f_i(x)*(kroneker_delta_ij - f_j(x))
@@ -458,7 +459,6 @@ std::vector<double> Activation(const std::vector<double>& input,
       break;
     }
   }
-  return output;
 }
 
 Eigen::VectorXd Loss(const Eigen::VectorXd& input, const Eigen::VectorXd& label,

@@ -117,7 +117,7 @@ void RunNetworkGradientTest() {
   const int input_size = 10;  // TODO: Enable non-square inputs.
   const int input_channels = 3;
   const int num_categories = 10;
-  const Network network =
+  Network network =
       BuildTestNetwork(input_channels, input_size, input_size, num_categories);
 
   // Get initial set of parameters.
@@ -194,7 +194,7 @@ void RunNetworkLearningTest() {
   const int input_size = 10;  // TODO: Enable non-square inputs.
   const int input_channels = 3;
   const int num_categories = 10;
-  const Network network =
+  Network network =
       BuildTestNetwork(input_channels, input_size, input_size, num_categories);
 
   // Get initial set of parameters.
@@ -256,7 +256,7 @@ void RunNetworkMnistTest() {
   const int input_size = 28;
   const int input_channels = 1;
   const int num_categories = 10;
-  const Network network =
+  Network network =
       BuildTestNetwork(input_channels, input_size, input_size, num_categories);
 
   // Get initial set of parameters.
