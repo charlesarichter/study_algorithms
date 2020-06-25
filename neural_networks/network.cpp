@@ -1,5 +1,6 @@
 #include "network.hpp"
 
+#include <chrono>
 #include <iostream>
 
 std::vector<double> Network::GetRandomParameters() const {
@@ -48,7 +49,10 @@ double Network::Evaluate(const std::vector<double>& input,
                          const std::vector<double>& label,
                          const std::vector<double>& parameters,
                          std::vector<double>* input_gradient,
-                         std::vector<double>* param_gradient) const {
+                         std::vector<double>* param_gradient,
+                         NetworkTiming* timing) const {
+  auto forward_pass_start = std::chrono::steady_clock::now();
+
   // Iterator indicating the beginning of the current layer's parameters.
   auto param_begin = parameters.begin();
 
@@ -101,6 +105,9 @@ double Network::Evaluate(const std::vector<double>& input,
            &loss_gradient);
   assert(loss.size() == 1);
 
+  auto forward_pass_end = std::chrono::steady_clock::now();
+  auto backward_pass_start = std::chrono::steady_clock::now();
+
   // Backward pass.
 
   // loss_gradient is the derivative of the loss output with respect to its
@@ -147,6 +154,14 @@ double Network::Evaluate(const std::vector<double>& input,
   // std::cerr << "Num param gradients: " << param_gradient->size() <<
   // std::endl; std::cerr << "Num params: " << parameters.size() << std::endl;
   assert(param_gradient->size() == parameters.size());
+
+  auto backward_pass_end = std::chrono::steady_clock::now();
+  std::chrono::duration<double> forward_pass_elapsed_seconds =
+      forward_pass_end - forward_pass_start;
+  std::chrono::duration<double> backward_pass_elapsed_seconds =
+      backward_pass_end - backward_pass_start;
+  timing->forward_pass = forward_pass_elapsed_seconds.count();
+  timing->backward_pass = backward_pass_elapsed_seconds.count();
 
   return loss(0);  // Make loss a scalar.
 }

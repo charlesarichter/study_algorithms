@@ -2,6 +2,11 @@
 
 #include "layer.hpp"
 
+struct NetworkTiming {
+  double forward_pass = 0;
+  double backward_pass = 0;
+};
+
 class Network {
  public:
   Network(const std::vector<LayerPtr>& layers) : layers_(layers){};
@@ -20,7 +25,8 @@ class Network {
                   const std::vector<double>& label,
                   const std::vector<double>& parameters,
                   std::vector<double>* input_gradient,
-                  std::vector<double>* param_gradient) const;
+                  std::vector<double>* param_gradient,
+                  NetworkTiming* timing) const;
 
   /**
    * Evaluates network using provided input and parameters but does not compute

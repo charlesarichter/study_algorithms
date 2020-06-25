@@ -135,8 +135,10 @@ void RunNetworkGradientTest() {
   // Evaluate network.
   std::vector<double> input_gradient;
   std::vector<double> param_gradient;
-  const double loss = network.Evaluate(input, label, parameters,
-                                       &input_gradient, &param_gradient);
+  NetworkTiming network_timing;
+  const double loss =
+      network.Evaluate(input, label, parameters, &input_gradient,
+                       &param_gradient, &network_timing);
 
   // Perturbation.
   const double delta = 1e-6;
@@ -150,9 +152,10 @@ void RunNetworkGradientTest() {
     std::vector<double> input_gradient_delta;
     std::vector<double> param_gradient_delta;
 
+    NetworkTiming network_timing_delta;
     const double loss_delta =
         network.Evaluate(input_delta, label, parameters, &input_gradient_delta,
-                         &param_gradient_delta);
+                         &param_gradient_delta, &network_timing_delta);
 
     const double numerical_gradient = (loss_delta - loss) / delta;
     if (std::abs(numerical_gradient - input_gradient.at(i)) > tol) {
@@ -171,9 +174,10 @@ void RunNetworkGradientTest() {
     std::vector<double> input_gradient_delta;
     std::vector<double> param_gradient_delta;
 
+    NetworkTiming network_timing_delta;
     const double loss_delta =
         network.Evaluate(input, label, parameters_delta, &input_gradient_delta,
-                         &param_gradient_delta);
+                         &param_gradient_delta, &network_timing_delta);
 
     const double numerical_gradient = (loss_delta - loss) / delta;
     if (std::abs(numerical_gradient - param_gradient.at(i)) > tol) {
@@ -211,8 +215,10 @@ void RunNetworkLearningTest() {
     // Evaluate network.
     std::vector<double> input_gradient;
     std::vector<double> param_gradient;
-    const double loss = network.Evaluate(input, label, parameters,
-                                         &input_gradient, &param_gradient);
+    NetworkTiming network_timing;
+    const double loss =
+        network.Evaluate(input, label, parameters, &input_gradient,
+                         &param_gradient, &network_timing);
 
     std::cerr << "Loss: " << loss << std::endl;
 
@@ -286,9 +292,14 @@ void RunNetworkMnistTest() {
       // Evaluate network.
       std::vector<double> input_gradient;
       std::vector<double> param_gradient;
+      NetworkTiming network_timing;
       const double loss =
           network.Evaluate(training_image, training_label, parameters,
-                           &input_gradient, &param_gradient);
+                           &input_gradient, &param_gradient, &network_timing);
+
+      std::cerr << "Forward: " << network_timing.forward_pass
+                << "s, Backward: " << network_timing.backward_pass << "s"
+                << std::endl;
 
       loss_batch_sum += loss;
 
