@@ -8,7 +8,7 @@
 #include "training.hpp"
 
 static void EvaulateNetworkPerformance(
-    const Network& network, const std::vector<double>& parameters,
+    Network& network, const std::vector<double>& parameters,
     const std::vector<Eigen::VectorXd>& inputs,
     const std::vector<Eigen::VectorXd>& labels) {
   int num_correct = 0;

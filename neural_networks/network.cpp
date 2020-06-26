@@ -13,36 +13,44 @@ std::vector<double> Network::GetRandomParameters() const {
   return parameters;
 }
 
-std::vector<double> Network::Evaluate(
-    const std::vector<double>& input, const std::vector<double>& label,
-    const std::vector<double>& parameters) const {
+std::vector<double> Network::Evaluate(const std::vector<double>& input,
+                                      const std::vector<double>& label,
+                                      const std::vector<double>& parameters) {
+  // TODO: Pre-allocate these containers and assert that their size is correct.
+  if (layer_io.size() != (layers_.size() + 1)) {
+    std::cerr << "Re-sizing layer IO container" << std::endl;
+    layer_io.resize(layers_.size() + 1);
+  }
+  if (layer_activation_gradients.size() != (layers_.size() + 1)) {
+    std::cerr << "Re-sizing layer activation gradients container" << std::endl;
+    layer_activation_gradients.resize(layers_.size() + 1);
+  }
+
   // Iterator indicating the beginning of the current layer's parameters.
   auto param_begin = parameters.begin();
 
   // Initialize input.
-  std::vector<double> layer_input = input;
+  layer_io.front() = input;
 
   // Foward pass.
-  for (const LayerPtr& layer : layers_) {
+  for (std::size_t i = 0; i < layers_.size(); ++i) {
+    const LayerPtr& layer = layers_.at(i);
+
     // Get parameters for this layer. TODO: Reduce/avoid copies.
     const int num_params = layer->GetNumParameters();
     const std::vector<double> layer_param(param_begin,
                                           param_begin + num_params);
 
     // Evaluate layer.
-    std::vector<double> layer_output;
-    std::vector<double> layer_activation_gradient;
-    layer->ForwardPass(layer_input, layer_param, &layer_output,
-                       &layer_activation_gradient);
-
-    // Copy output to next layer's input.
-    layer_input = layer_output;
+    layer->ForwardPass(layer_io.at(i), layer_param, &layer_io.at(i + 1),
+                       &layer_activation_gradients.at(i));
 
     // Advance the param iterator.
     param_begin += num_params;
   }
 
-  return layer_input;
+  // TODO: Can also use layers_.back() if you confirm size is correct.
+  return layer_io.at(layers_.size());
 }
 
 double Network::Evaluate(const std::vector<double>& input,

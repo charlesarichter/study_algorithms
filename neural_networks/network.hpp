@@ -33,7 +33,7 @@ class Network {
    */
   std::vector<double> Evaluate(const std::vector<double>& input,
                                const std::vector<double>& label,
-                               const std::vector<double>& parameters) const;
+                               const std::vector<double>& parameters);
 
  private:
   std::vector<LayerPtr> layers_;
