@@ -134,7 +134,7 @@ double Network::Evaluate(const std::vector<double>& input,
     // TODO: Avoid reusing variable names.
     const std::vector<double>& layer_input = layer_io_.at(i);
     const std::vector<double>& layer_param = layer_params.at(i);
-    const std::vector<double>& layer_act_grad =
+    const ActivationGradient& layer_act_grad =
         layer_activation_gradients_.at(i);
 
     std::vector<double> dloss_dnetwork_updated;

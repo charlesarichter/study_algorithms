@@ -31,7 +31,7 @@ std::vector<double> LayerFC::GetRandomParameters() const {
 void LayerFC::ForwardPass(const std::vector<double>& input,
                           const std::vector<double>& parameters,
                           std::vector<double>* output,
-                          std::vector<double>* activation_gradient) const {
+                          ActivationGradient* activation_gradient) const {
   const std::size_t num_weights = num_inputs_ * num_outputs_;
   const std::size_t num_biases = num_outputs_;
 
@@ -60,7 +60,7 @@ void LayerFC::ForwardPass(const std::vector<double>& input,
 
 void LayerFC::BackwardPass(const std::vector<double>& input,
                            const std::vector<double>& parameters,
-                           const std::vector<double>& activation_gradient,
+                           const ActivationGradient& activation_gradient,
                            const std::vector<double>& dloss_doutput,
                            std::vector<double>* dloss_dinput,
                            std::vector<double>* dloss_dparams) const {
@@ -80,7 +80,7 @@ void LayerFC::BackwardPass(const std::vector<double>& input,
   const Eigen::Map<const Eigen::VectorXd> input_mat(input.data(), input.size());
 
   const Eigen::Map<const Eigen::MatrixXd> activation_gradient_mat(
-      activation_gradient.data(), num_outputs_, num_outputs_);
+      activation_gradient.gradient.data(), num_outputs_, num_outputs_);
 
   const Eigen::Map<const Eigen::MatrixXd> W(parameters.data(), num_outputs_,
                                             num_inputs_);
@@ -93,6 +93,8 @@ void LayerFC::BackwardPass(const std::vector<double>& input,
   const Eigen::Map<const Eigen::MatrixXd> dloss_doutput_mat(
       dloss_doutput.data(), 1, num_outputs_);
 
+  // TODO: Toggle computation based on whether activation_gradient_mat is
+  // diagonal. See LayerConv::BackwardPass for example.
   const Eigen::MatrixXd doutput_dinput_mat = activation_gradient_mat * W;
   const Eigen::MatrixXd dloss_dweights_mat = activation_gradient_mat *
                                              dloss_doutput_mat.transpose() *
@@ -153,7 +155,7 @@ std::vector<double> LayerConv::GetRandomParameters() const {
 void LayerConv::ForwardPass(const std::vector<double>& input,
                             const std::vector<double>& parameters,
                             std::vector<double>* output,
-                            std::vector<double>* activation_gradient) const {
+                            ActivationGradient* activation_gradient) const {
   int num_kernel_parameters = GetNumKernelParameters();
   int num_bias_parameters = GetNumBiasParameters();
 
@@ -198,7 +200,7 @@ void LayerConv::ForwardPass(const std::vector<double>& input,
 
 void LayerConv::BackwardPass(const std::vector<double>& input,
                              const std::vector<double>& parameters,
-                             const std::vector<double>& activation_gradient,
+                             const ActivationGradient& activation_gradient,
                              const std::vector<double>& dloss_doutput,
                              std::vector<double>* dloss_dinput,
                              std::vector<double>* dloss_dparams) const {
@@ -206,7 +208,7 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
 
   const std::size_t num_outputs =
       GetOutputRows() * GetOutputCols() * num_kernels_;
-  assert(activation_gradient.size() == num_outputs * num_outputs);
+  assert(activation_gradient.gradient.size() == num_outputs * num_outputs);
   assert(num_outputs == dloss_doutput.size());
 
   std::size_t num_kernel_parameters = GetNumKernelParameters();
@@ -227,15 +229,24 @@ void LayerConv::BackwardPass(const std::vector<double>& input,
   const ConvKernels conv_kernels(kernel_parameters, num_kernels_,
                                  input_channels_, kernel_rows_, kernel_cols_);
 
-  // TODO: This matrix-vector multiplication is a bottleneck. Consider
-  // exploiting sparsity of activation_gradient, especially considering it's
-  // only dense for softmax activations, which we never use in a conv layer.
-  const Eigen::VectorXd dloss_doutput_pre_act =
-      Eigen::Map<const Eigen::MatrixXd>(activation_gradient.data(),
-                                        dloss_doutput.size(),
-                                        dloss_doutput.size()) *
-      Eigen::Map<const Eigen::VectorXd>(dloss_doutput.data(),
-                                        dloss_doutput.size());
+  // Toggle computation based on whether activation_gradient is diagonal or not.
+  Eigen::VectorXd dloss_doutput_pre_act;
+  if (activation_gradient.diagonal) {
+    dloss_doutput_pre_act =
+        Eigen::Map<const Eigen::MatrixXd>(activation_gradient.gradient.data(),
+                                          dloss_doutput.size(),
+                                          dloss_doutput.size())
+            .diagonal()
+            .cwiseProduct(Eigen::Map<const Eigen::VectorXd>(
+                dloss_doutput.data(), dloss_doutput.size()));
+  } else {
+    dloss_doutput_pre_act = Eigen::Map<const Eigen::MatrixXd>(
+                                activation_gradient.gradient.data(),
+                                dloss_doutput.size(), dloss_doutput.size()) *
+                            Eigen::Map<const Eigen::VectorXd>(
+                                dloss_doutput.data(), dloss_doutput.size());
+  }
+
   std::vector<double> dloss_doutput_pre_act_vec(
       dloss_doutput_pre_act.data(),
       dloss_doutput_pre_act.data() + dloss_doutput_pre_act.size());

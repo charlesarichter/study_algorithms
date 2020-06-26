@@ -41,5 +41,5 @@ class Network {
   // TODO: Compute and pre-allocate the sizes of these containers and their
   // elements, then assert that that size is correct everywhere they are used.
   std::vector<std::vector<double>> layer_io_;
-  std::vector<std::vector<double>> layer_activation_gradients_;
+  std::vector<ActivationGradient> layer_activation_gradients_;
 };

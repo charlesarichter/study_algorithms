@@ -363,44 +363,46 @@ Eigen::VectorXd Activation(const Eigen::VectorXd& input,
 void Activation(const std::vector<double>& input,
                 const ActivationFunction activation_function,
                 std::vector<double>* activation,
-                std::vector<double>* activation_gradient) {
+                ActivationGradient* activation_gradient) {
   if (activation->size() != input.size()) {
     std::cerr << "Allocating activation output data!" << std::endl;
     activation->resize(input.size());
   }
-  if (activation_gradient->size() != (input.size() * input.size())) {
+  if (activation_gradient->gradient.size() != (input.size() * input.size())) {
     std::cerr << "Allocating activation gradient output data!" << std::endl;
-    activation_gradient->resize(input.size() * input.size(), 0.0);
+    activation_gradient->gradient.resize(input.size() * input.size(), 0.0);
   }
 
   switch (activation_function) {
     case ActivationFunction::LINEAR: {
+      activation_gradient->diagonal = true;
       *activation = input;
 
       // Slope of one.
       // Construct identity matrix elementwise.
       for (size_t i = 0; i < input.size(); ++i) {
         const std::size_t ind = i + i * input.size();
-        activation_gradient->at(ind) = 1;
+        activation_gradient->gradient.at(ind) = 1;
       }
-
       break;
     }
     case ActivationFunction::RELU: {
+      activation_gradient->diagonal = true;
       for (size_t i = 0; i < input.size(); ++i) {
         const std::size_t ind = i + i * input.size();
         if (input.at(i) <= 0) {
           activation->at(i) = 0;
           // Don't need to set this since gradient is zero initialized.
-          // activation_gradient->at(ind) = 0;
+          // activation_gradient->gradient.at(ind) = 0;
         } else {
           activation->at(i) = input.at(i);
-          activation_gradient->at(ind) = 1;
+          activation_gradient->gradient.at(ind) = 1;
         }
       }
       break;
     }
     case ActivationFunction::SIGMOID: {
+      activation_gradient->diagonal = true;
       // The "Sigmoid" (a.k.a. "Logistic") function squashes each element in
       // the input into the range (0,1). These outputs are independent of
       // one another. There is no normalization across all the outputs
@@ -410,11 +412,12 @@ void Activation(const std::vector<double>& input,
         const std::size_t ind = i + i * input.size();
         const double f = 1 / (1 + exp(-1 * input.at(i)));
         activation->at(i) = f;
-        activation_gradient->at(ind) = f * (1 - f);
+        activation_gradient->gradient.at(ind) = f * (1 - f);
       }
       break;
     }
     case ActivationFunction::SOFTMAX: {
+      activation_gradient->diagonal = false;
       // The Softmax function is a multi-dimensional generalization of the
       // logistic function. When the number of output dimensions is 2, the
       // softmax function is equivalent to the logistic function. One of the
@@ -437,7 +440,7 @@ void Activation(const std::vector<double>& input,
           const std::size_t ind = j + i * input.size();
 
           const double kroneker_delta = (i == j) ? 1.0 : 0.0;
-          activation_gradient->at(ind) =
+          activation_gradient->gradient.at(ind) =
               activation->at(i) * (kroneker_delta - activation->at(j));
         }
       }

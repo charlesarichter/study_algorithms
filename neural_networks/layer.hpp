@@ -28,11 +28,11 @@ class Layer {
   virtual void ForwardPass(const std::vector<double>& input,
                            const std::vector<double>& parameters,
                            std::vector<double>* output,
-                           std::vector<double>* activation_gradient) const = 0;
+                           ActivationGradient* activation_gradient) const = 0;
 
   virtual void BackwardPass(const std::vector<double>& input,
                             const std::vector<double>& parameters,
-                            const std::vector<double>& activation_gradient,
+                            const ActivationGradient& activation_gradient,
                             const std::vector<double>& dloss_doutput,
                             std::vector<double>* dloss_dinput,
                             std::vector<double>* dloss_dparams) const = 0;
@@ -63,11 +63,11 @@ class LayerFC : public Layer {
   void ForwardPass(const std::vector<double>& input,
                    const std::vector<double>& parameters,
                    std::vector<double>* output,
-                   std::vector<double>* activation_gradient) const;
+                   ActivationGradient* activation_gradient) const;
 
   void BackwardPass(const std::vector<double>& input,
                     const std::vector<double>& parameters,
-                    const std::vector<double>& activation_gradient,
+                    const ActivationGradient& activation_gradient,
                     const std::vector<double>& dloss_doutput,
                     std::vector<double>* dloss_dinput,
                     std::vector<double>* dloss_dparams) const;
@@ -103,11 +103,11 @@ class LayerConv : public Layer {
   void ForwardPass(const std::vector<double>& input,
                    const std::vector<double>& parameters,
                    std::vector<double>* output,
-                   std::vector<double>* activation_gradient) const;
+                   ActivationGradient* activation_gradient) const;
 
   void BackwardPass(const std::vector<double>& input,
                     const std::vector<double>& parameters,
-                    const std::vector<double>& activation_gradient,
+                    const ActivationGradient& activation_gradient,
                     const std::vector<double>& dloss_doutput,
                     std::vector<double>* dloss_dinput,
                     std::vector<double>* dloss_dparams) const;
