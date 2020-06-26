@@ -17,20 +17,20 @@ std::vector<double> Network::Evaluate(const std::vector<double>& input,
                                       const std::vector<double>& label,
                                       const std::vector<double>& parameters) {
   // TODO: Pre-allocate these containers and assert that their size is correct.
-  if (layer_io.size() != (layers_.size() + 1)) {
+  if (layer_io_.size() != (layers_.size() + 1)) {
     std::cerr << "Re-sizing layer IO container" << std::endl;
-    layer_io.resize(layers_.size() + 1);
+    layer_io_.resize(layers_.size() + 1);
   }
-  if (layer_activation_gradients.size() != (layers_.size() + 1)) {
+  if (layer_activation_gradients_.size() != (layers_.size() + 1)) {
     std::cerr << "Re-sizing layer activation gradients container" << std::endl;
-    layer_activation_gradients.resize(layers_.size() + 1);
+    layer_activation_gradients_.resize(layers_.size() + 1);
   }
 
   // Iterator indicating the beginning of the current layer's parameters.
   auto param_begin = parameters.begin();
 
   // Initialize input.
-  layer_io.front() = input;
+  layer_io_.front() = input;
 
   // Foward pass.
   for (std::size_t i = 0; i < layers_.size(); ++i) {
@@ -42,15 +42,15 @@ std::vector<double> Network::Evaluate(const std::vector<double>& input,
                                           param_begin + num_params);
 
     // Evaluate layer.
-    layer->ForwardPass(layer_io.at(i), layer_param, &layer_io.at(i + 1),
-                       &layer_activation_gradients.at(i));
+    layer->ForwardPass(layer_io_.at(i), layer_param, &layer_io_.at(i + 1),
+                       &layer_activation_gradients_.at(i));
 
     // Advance the param iterator.
     param_begin += num_params;
   }
 
   // TODO: Can also use layers_.back() if you confirm size is correct.
-  return layer_io.at(layers_.size());
+  return layer_io_.at(layers_.size());
 }
 
 double Network::Evaluate(const std::vector<double>& input,
@@ -65,17 +65,17 @@ double Network::Evaluate(const std::vector<double>& input,
   auto param_begin = parameters.begin();
 
   // TODO: Pre-allocate these containers and assert that their size is correct.
-  if (layer_io.size() != (layers_.size() + 1)) {
+  if (layer_io_.size() != (layers_.size() + 1)) {
     std::cerr << "Re-sizing layer IO container" << std::endl;
-    layer_io.resize(layers_.size() + 1);
+    layer_io_.resize(layers_.size() + 1);
   }
-  if (layer_activation_gradients.size() != (layers_.size() + 1)) {
+  if (layer_activation_gradients_.size() != (layers_.size() + 1)) {
     std::cerr << "Re-sizing layer activation gradients container" << std::endl;
-    layer_activation_gradients.resize(layers_.size() + 1);
+    layer_activation_gradients_.resize(layers_.size() + 1);
   }
 
   // Initialize input.
-  layer_io.front() = input;
+  layer_io_.front() = input;
 
   // Store the parameters.
   std::vector<std::vector<double>> layer_params;
@@ -90,8 +90,8 @@ double Network::Evaluate(const std::vector<double>& input,
                                           param_begin + num_params);
 
     // Evaluate layer.
-    layer->ForwardPass(layer_io.at(i), layer_param, &layer_io.at(i + 1),
-                       &layer_activation_gradients.at(i));
+    layer->ForwardPass(layer_io_.at(i), layer_param, &layer_io_.at(i + 1),
+                       &layer_activation_gradients_.at(i));
 
     // TODO: Reduce/avoid copies.
     layer_params.emplace_back(layer_param);
@@ -106,7 +106,7 @@ double Network::Evaluate(const std::vector<double>& input,
 
   // TODO: Can also use layers_.back() if you confirm size is correct.
   const Eigen::VectorXd network_output = Eigen::Map<Eigen::VectorXd>(
-      layer_io.at(layers_.size()).data(), layer_io.at(layers_.size()).size());
+      layer_io_.at(layers_.size()).data(), layer_io_.at(layers_.size()).size());
 
   Eigen::VectorXd loss_gradient;
   const Eigen::VectorXd loss =
@@ -132,10 +132,10 @@ double Network::Evaluate(const std::vector<double>& input,
     const LayerPtr& layer = layers_.at(i);
 
     // TODO: Avoid reusing variable names.
-    const std::vector<double>& layer_input = layer_io.at(i);
+    const std::vector<double>& layer_input = layer_io_.at(i);
     const std::vector<double>& layer_param = layer_params.at(i);
     const std::vector<double>& layer_act_grad =
-        layer_activation_gradients.at(i);
+        layer_activation_gradients_.at(i);
 
     std::vector<double> dloss_dnetwork_updated;
     std::vector<double> dloss_dparams;
